@@ -1,0 +1,12 @@
+# Ignorar credenciales de base de datos
+config/db.php
+config/config.php
+
+# Ignorar archivos temporales y logs de IIS/PHP
+C:\windows\Temp\
+error_log
+*.log
+
+# Carpetas de editores
+.vscode/
+libs/
