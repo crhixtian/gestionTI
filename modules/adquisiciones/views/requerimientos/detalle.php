@@ -1,4 +1,4 @@
-<div class="d-flex justify-content-between align-items-center mb-3">
+﻿<div class="d-flex justify-content-between align-items-center mb-3">
 	<div>
 		<h3 class="mb-0">Pedido de Compra: <?php echo htmlspecialchars($requerimiento['NroPedidoCompra']); ?></h3>
 		<span id="estado-requerimiento-badge">
@@ -79,8 +79,15 @@
 						<td><?php echo htmlspecialchars($detalle['CodigoSiga']); ?></td>
 						<td><?php echo htmlspecialchars((string) ($detalle['Clasificador'] ?? '')); ?></td>
 						<td><?php echo htmlspecialchars($detalle['DescripcionDetallada']); ?></td>
-						<td><?php echo (int) $detalle['Cantidad']; ?></td>
-						<td><?php echo htmlspecialchars((string) ($detalle['CodigoTecnologia'] ?? '')); ?></td>
+					<td><?php echo (int) $detalle['Cantidad']; ?></td>
+					<td>
+						<button type="button"
+							class="btn btn-sm btn-outline-secondary"
+							onclick="abrirDistribucionDetalle(<?php echo (int) $detalle['Id']; ?>)">
+							Distribuir
+						</button>
+					</td>
+					<td><?php echo htmlspecialchars((string) ($detalle['CodigoTecnologia'] ?? '')); ?></td>
 						<td class="text-end align-middle">
 							<div class="btn-group" role="group">
 								<button type="button"
@@ -182,10 +189,78 @@
 	</div>
 </div>
 
+<div class="modal modal-blur fade" id="modal-distribucion-detalle" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="modal-distribucion-detalle-title">Distribución por Ítem</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form id="form-distribucion-detalle" method="post">
+				<input type="hidden" name="Id" id="distribucion-Id">
+				<input type="hidden" name="IdDetalleRequerimiento" id="distribucion-IdDetalleRequerimiento">
+				<div class="modal-body">
+					<div class="mb-3">
+						<strong id="distribucion-item-info"></strong>
+					</div>
+					<div class="row g-3">
+						<div class="col-md-5">
+							<label class="form-label">Centro de Costo</label>
+							<select name="IdCentroCosto" id="distribucion-IdCentroCosto" class="form-select" required>
+								<option value="">Seleccione un centro</option>
+								<?php foreach ($centrosCostoDistribucion as $centro): ?>
+									<option value="<?php echo (int) $centro['Id']; ?>"><?php echo htmlspecialchars($centro['Siglas'] . ' - ' . $centro['NombreCentroCosto']); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						<div class="col-md-5">
+							<label class="form-label">Subcentro de Costo</label>
+							<select name="IdSubCentroCosto" id="distribucion-IdSubCentroCosto" class="form-select">
+								<option value="">Sin subcentro</option>
+							</select>
+						</div>
+						<div class="col-md-2">
+							<label class="form-label">Cantidad</label>
+							<input type="number" name="Cantidad" id="distribucion-Cantidad" class="form-control" min="1" required>
+						</div>
+					</div>
+					<div class="row mt-3">
+						<div class="col-12 col-md-4">
+							<div class="mb-1"><strong>Total solicitado:</strong> <span id="distribucion-total-solicitado">0</span></div>
+							<div class="mb-1"><strong>Total distribuido:</strong> <span id="distribucion-total-distribuido">0</span></div>
+							<div class="mb-1"><strong>Saldo restante:</strong> <span id="distribucion-total-saldo">0</span></div>
+						</div>
+						<div class="col-12 col-md-8">
+							<div class="table-responsive">
+								<table class="table table-sm table-striped">
+									<thead>
+										<tr>
+											<th>Centro</th>
+											<th>Subcentro</th>
+											<th>Cantidad</th>
+											<th class="text-end">Acciones</th>
+										</tr>
+									</thead>
+									<tbody id="tabla-distribucion-detalle"></tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+					<button type="submit" class="btn btn-primary">Guardar distribución</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
 <script>
 	const idRequerimiento = <?php echo (int) $requerimiento['Id']; ?>;
 	const nroPedidoCompra = <?php echo json_encode((string) $requerimiento['NroPedidoCompra']); ?>;
 	const codigoMetaRequerimiento = <?php echo json_encode((string) ($requerimiento['CodigoMeta'] ?? '')); ?>;
+	const subCentrosCostoDistribucion = <?php echo json_encode($subCentrosCostoDistribucion); ?>;
 	let modoEdicion = false;
 	let estadoActualRequerimiento = <?php echo (int) $requerimiento['Estado']; ?>;
 
@@ -228,7 +303,21 @@
 			},
 			body: new URLSearchParams(formData).toString()
 		}).then(function(response) {
-			return response.json();
+			return response.text().then(function(text) {
+				if (!response.ok) {
+					console.error('HTTP error en postForm:', response.status, response.url, text);
+					return { success: false, message: 'Error de servidor (' + response.status + ')' };
+				}
+				try {
+					return JSON.parse(text);
+				} catch (error) {
+					console.error('JSON inválido en postForm:', error, response.url, text);
+					return { success: false, message: 'Respuesta inválida del servidor', response: text };
+				}
+			});
+		}).catch(function(error) {
+			console.error('Error de red en postForm:', error);
+			return { success: false, message: 'Error de red' };
 		});
 	}
 
@@ -329,30 +418,244 @@
 				' data-id="' + id + '"',
 				' data-id-catalogo-tecnologico="' + escapeHtml(valores.idCatalogoTecnologico) + '"',
 				' data-codigo-tecnologia="' + escapeHtml(valores.codigoTecnologia || '') + '"',
-				' data-codigo-siga="' + escapeHtml(valores.codigoSiga) + '"',
+				' data-codigo-siga="' + escapeHtml(valores.codigoSiga || '') + '"',
 				' data-clasificador="' + escapeHtml(valores.clasificador || '') + '"',
-				' data-descripcion-detallada="' + escapeHtml(valores.descripcionDetallada) + '"',
+				' data-descripcion-detallada="' + escapeHtml(valores.descripcionDetallada || '') + '"',
 				' data-cantidad="' + parseInt(valores.cantidad, 10) + '"',
 				' data-unidad-medida="' + escapeHtml(valores.unidadMedida) + '">',
-				'<td>' + escapeHtml(valores.codigoSiga) + '</td>',
+				'<td>' + escapeHtml(valores.codigoSiga || '') + '</td>',
 				'<td>' + escapeHtml(valores.clasificador || '') + '</td>',
-				'<td>' + escapeHtml(valores.descripcionDetallada) + '</td>',
+				'<td>' + escapeHtml(valores.descripcionDetallada || '') + '</td>',
 				'<td>' + parseInt(valores.cantidad, 10) + '</td>',
 				'<td>' + escapeHtml(valores.codigoTecnologia || '') + '</td>',
 				'<td class="text-end align-middle">',
 				'<div class="btn-group" role="group">',
-					// Editar
-					'<button type="button" class="btn btn-icon btn-lg" title="Editar" onclick="editarDetalle(' + id + ')">',
-					'<i class="ti ti-edit fs-2"></i>',
+					'<button type="button" class="btn btn-icon btn-lg" title="Distribuir" onclick="abrirDistribucionDetalle(' + id + ')">',
+						'<i class="ti ti-adjustments-horizontal fs-2"></i>',
 					'</button>',
-					// Eliminar
+					'<button type="button" class="btn btn-icon btn-lg" title="Editar" onclick="editarDetalle(' + id + ')">',
+						'<i class="ti ti-edit fs-2"></i>',
+					'</button>',
 					'<button type="button" class="btn btn-icon btn-lg text-danger" title="Eliminar" onclick="eliminarDetalle(' + id + ')">',
-					'<i class="ti ti-trash fs-2"></i>',
+						'<i class="ti ti-trash fs-2"></i>',
 					'</button>',
 				'</div>',
 				'</td>',
 			'</tr>'
 		].join('');
+	}
+
+	function obtenerFilaDetallePorId(id) {
+		return document.querySelector('tr[data-id="' + id + '"]');
+	}
+
+	function actualizarSubCentrosDisponibles(idCentroCosto) {
+		const subCentroSelect = document.getElementById('distribucion-IdSubCentroCosto');
+		if (!subCentroSelect) {
+			return;
+		}
+
+		subCentroSelect.innerHTML = '<option value="">Sin subcentro</option>';
+		const centroSeleccionado = parseInt(idCentroCosto, 10);
+		subCentrosCostoDistribucion.forEach(function(subcentro) {
+			if (centroSeleccionado > 0 && parseInt(subcentro.IdCentroCosto, 10) !== centroSeleccionado) {
+				return;
+			}
+
+			const option = document.createElement('option');
+			option.value = subcentro.Id;
+			option.textContent = subcentro.Siglas ? subcentro.Siglas + ' - ' + subcentro.NombreSubCentroCosto : subcentro.NombreSubCentroCosto;
+			subCentroSelect.appendChild(option);
+		});
+	}
+
+	function calcularResumenDistribucion(totalSolicitado, distribuciones) {
+		const totalDistribuido = distribuciones.reduce(function(acc, distribucion) {
+			return acc + (parseInt(distribucion.Cantidad, 10) || 0);
+		}, 0);
+		return {
+			totalSolicitado: totalSolicitado,
+			totalDistribuido: totalDistribuido,
+			totalSaldo: Math.max(0, totalSolicitado - totalDistribuido)
+		};
+	}
+
+	function renderDistribuciones(distribuciones, totalSolicitado) {
+		const tabla = document.getElementById('tabla-distribucion-detalle');
+		if (!tabla) {
+			return;
+		}
+
+		tabla.innerHTML = '';
+		if (!Array.isArray(distribuciones) || distribuciones.length === 0) {
+			tabla.innerHTML = '<tr><td colspan="4" class="text-center text-secondary">No hay distribuciones registradas.</td></tr>';
+			setText('distribucion-total-distribuido', '0');
+			setText('distribucion-total-saldo', totalSolicitado);
+			return;
+		}
+
+		distribuciones.forEach(function(distribucion) {
+			tabla.insertAdjacentHTML('beforeend',
+				'<tr>' +
+					'<td>' + escapeHtml(distribucion.SiglasCentroCosto ? distribucion.SiglasCentroCosto + ' - ' + distribucion.NombreCentroCosto : distribucion.NombreCentroCosto) + '</td>' +
+					'<td>' + escapeHtml(distribucion.SiglasSubCentroCosto ? distribucion.SiglasSubCentroCosto + ' - ' + distribucion.NombreSubCentroCosto : (distribucion.NombreSubCentroCosto || 'Sin subcentro')) + '</td>' +
+					'<td>' + parseInt(distribucion.Cantidad, 10) + '</td>' +
+					'<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarDistribucionDetalle(' + parseInt(distribucion.Id, 10) + ')">Eliminar</button></td>' +
+				'</tr>'
+			);
+		});
+
+		const resumen = calcularResumenDistribucion(totalSolicitado, distribuciones);
+		setText('distribucion-total-distribuido', resumen.totalDistribuido);
+		setText('distribucion-total-saldo', resumen.totalSaldo);
+	}
+
+	function cargarDistribucionesDetalle(idDetalle) {
+		return fetch('index.php?module=adquisiciones&action=obtenerDistribucionDetalleAjax&idDetalle=' + encodeURIComponent(idDetalle))
+			.then(function(response) {
+				return response.text().then(function(text) {
+					if (!response.ok) {
+						console.error('Respuesta no OK al cargar distribuciones:', response.status, text);
+						return { success: false, distribuciones: [] };
+					}
+					try {
+						return JSON.parse(text);
+					} catch (error) {
+						console.error('JSON inválido al cargar distribuciones:', error, text);
+						return { success: false, distribuciones: [] };
+					}
+				});
+			})
+			.then(function(result) {
+				if (result && result.success) {
+					return result.distribuciones || [];
+				}
+				return [];
+			})
+			.catch(function(error) {
+				console.error('Error cargando distribuciones:', error);
+				return [];
+			});
+	}
+
+	function abrirDistribucionDetalle(idDetalle) {
+		const fila = obtenerFilaDetallePorId(idDetalle);
+		if (!fila) {
+			return;
+		}
+
+		const codigoSiga = fila.dataset.codigoSiga || '';
+		const descripcionDetallada = fila.dataset.descripcionDetallada || '';
+		const cantidadSolicitada = parseInt(fila.dataset.cantidad, 10) || 0;
+
+		setValue('distribucion-Id', '');
+		setValue('distribucion-IdDetalleRequerimiento', idDetalle);
+		setText('distribucion-item-info', 'Ítem: ' + codigoSiga + ' - ' + descripcionDetallada);
+		setText('distribucion-total-solicitado', cantidadSolicitada);
+		setValue('distribucion-Cantidad', cantidadSolicitada > 0 ? cantidadSolicitada : 1);
+
+		const centroSelect = document.getElementById('distribucion-IdCentroCosto');
+		if (centroSelect) {
+			centroSelect.value = '';
+		}
+		actualizarSubCentrosDisponibles('');
+
+		cargarDistribucionesDetalle(idDetalle)
+			.then(function(distribuciones) {
+				renderDistribuciones(distribuciones, cantidadSolicitada);
+			})
+			.catch(function(error) {
+				console.error('Error cargando distribuciones:', error);
+				renderDistribuciones([], cantidadSolicitada);
+			})
+			.finally(function() {
+				hideModalById('modal-distribucion-detalle');
+				showModalById('modal-distribucion-detalle');
+			});
+	}
+
+	function guardarDistribucionDetalle(event) {
+		event.preventDefault();
+
+		const form = document.getElementById('form-distribucion-detalle');
+		if (!form) {
+			return;
+		}
+
+		const idDetalleRequerimiento = parseInt(form.querySelector('#distribucion-IdDetalleRequerimiento').value, 10) || 0;
+		const centroCosto = parseInt(form.querySelector('#distribucion-IdCentroCosto').value, 10) || 0;
+		const subCentroCosto = form.querySelector('#distribucion-IdSubCentroCosto').value || '';
+		const cantidad = parseInt(form.querySelector('#distribucion-Cantidad').value, 10) || 0;
+		const totalSolicitado = parseInt(document.getElementById('distribucion-total-solicitado').textContent, 10) || 0;
+
+		if (idDetalleRequerimiento <= 0 || centroCosto <= 0 || cantidad <= 0) {
+			window.adqNotifySafe('danger', 'Datos incompletos', 'Complete todos los campos de distribución.');
+			return;
+		}
+
+		cargarDistribucionesDetalle(idDetalleRequerimiento).then(function(distribuciones) {
+			const totalDistribuido = distribuciones.reduce(function(acc, distribucion) {
+				return acc + (parseInt(distribucion.Cantidad, 10) || 0);
+			}, 0);
+
+			if (cantidad > totalSolicitado - totalDistribuido) {
+				window.adqNotifySafe('warning', 'Cantidad no válida', 'La cantidad supera el saldo restante.');
+				return;
+			}
+
+			const payload = {
+				IdDetalleRequerimiento: idDetalleRequerimiento,
+				IdCentroCosto: centroCosto,
+				IdSubCentroCosto: subCentroCosto,
+				Cantidad: cantidad
+			};
+
+			const existeDuplicado = distribuciones.some(function(distribucion) {
+				const mismoCentro = parseInt(distribucion.IdCentroCosto, 10) === centroCosto;
+				const mismoSubcentro = (distribucion.IdSubCentroCosto === null && subCentroCosto === '') || parseInt(distribucion.IdSubCentroCosto || 0, 10) === parseInt(subCentroCosto || 0, 10);
+				return mismoCentro && mismoSubcentro;
+			});
+
+			if (existeDuplicado) {
+				window.adqNotifySafe('warning', 'Duplicado detectado', 'Ya existe una distribución con el mismo centro y subcentro.');
+				return;
+			}
+
+			postData('guardarDistribucionDetalleAjax', payload)
+				.then(function(response) {
+					if (response.success) {
+						window.adqNotifySafe('success', 'Distribución guardada', response.message || 'Distribución guardada correctamente.');
+						return cargarDistribucionesDetalle(idDetalleRequerimiento);
+					}
+					throw new Error(response.message || 'No se pudo guardar la distribución.');
+				})
+				.then(function(distribuciones) {
+					renderDistribuciones(distribuciones, totalSolicitado);
+					setValue('distribucion-Cantidad', totalSolicitado - distribuciones.reduce(function(acc, distribucion) {
+						return acc + (parseInt(distribucion.Cantidad, 10) || 0);
+					}, 0) || 0);
+				})
+				.catch(function() {
+					window.adqNotifySafe('danger', 'Error de solicitud', 'Ocurrió un error al guardar la distribución.');
+				});
+		});
+	}
+
+	function eliminarDistribucionDetalle(id) {
+		postData('eliminarDistribucionDetalleAjax', { id: id })
+			.then(function(response) {
+				if (response.success) {
+					const idDetalleReq = parseInt(document.getElementById('distribucion-IdDetalleRequerimiento').value, 10) || 0;
+					const totalSolicitado = parseInt(document.getElementById('distribucion-total-solicitado').textContent, 10) || 0;
+					return cargarDistribucionesDetalle(idDetalleReq).then(function(distribuciones) {
+						renderDistribuciones(distribuciones, totalSolicitado);
+					});
+				}
+				window.adqNotifySafe('danger', 'No se pudo eliminar', response.message || 'No se pudo eliminar la distribución.');
+			})
+			.catch(function() {
+				window.adqNotifySafe('danger', 'Error de solicitud', 'Ocurrió un error al eliminar la distribución.');
+			});
 	}
 
 	function upsertFilaDetalle(id, valores, esEdicion) {
@@ -555,6 +858,8 @@
 	function inicializarVistaDetalleRequerimiento() {
 		const btnAgregar = document.getElementById('btn-agregar-item');
 		const formDetalle = document.getElementById('form-detalle');
+		const formDistribucion = document.getElementById('form-distribucion-detalle');
+		const selectCentroDistribucion = document.getElementById('distribucion-IdCentroCosto');
 
 		if (btnAgregar && !btnAgregar.dataset.inicializado) {
 			btnAgregar.addEventListener('click', nuevoDetalle);
@@ -563,6 +868,16 @@
 		if (formDetalle && !formDetalle.dataset.inicializado) {
 			formDetalle.addEventListener('submit', guardarDetalle);
 			formDetalle.dataset.inicializado = '1';
+		}
+		if (formDistribucion && !formDistribucion.dataset.inicializado) {
+			formDistribucion.addEventListener('submit', guardarDistribucionDetalle);
+			formDistribucion.dataset.inicializado = '1';
+		}
+		if (selectCentroDistribucion && !selectCentroDistribucion.dataset.inicializado) {
+			selectCentroDistribucion.addEventListener('change', function() {
+				actualizarSubCentrosDisponibles(this.value);
+			});
+			selectCentroDistribucion.dataset.inicializado = '1';
 		}
 		configurarBotonesModalFallback();
 	}

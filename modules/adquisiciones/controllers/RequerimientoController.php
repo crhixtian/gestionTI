@@ -542,7 +542,7 @@ $dashboardOrdenesProximas = [];
 $dashboardMetaSiaf = [];
 $dashboardSubCentrosCosto = [];
 $idUsuarioSesion = isset($_SESSION['usuario_id']) ? (int) $_SESSION['usuario_id'] : null;
-$accionesDetalle = ['guardarDetalleAjax', 'actualizarDetalleAjax', 'eliminarDetalleAjax', 'actualizarEstadoAjax', 'guardarDetalleForm'];
+$accionesDetalle = ['guardarDetalleAjax', 'actualizarDetalleAjax', 'eliminarDetalleAjax', 'actualizarEstadoAjax', 'guardarDetalleForm', 'obtenerDistribucionDetalleAjax', 'guardarDistribucionDetalleAjax', 'eliminarDistribucionDetalleAjax'];
 $accionesTecnologia = [
 	'tecnologia',
 	'verEspecificacionTecnicaAjax',

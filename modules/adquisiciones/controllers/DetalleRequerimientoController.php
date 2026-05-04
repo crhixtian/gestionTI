@@ -1,6 +1,7 @@
 <?php
 require_once 'modules/adquisiciones/models/RequerimientoModel.php';
 require_once 'modules/adquisiciones/models/DetalleRequerimientoModel.php';
+require_once 'modules/adquisiciones/models/DistribucionDetalleModel.php';
 require_once 'modules/adquisiciones/helpers.php';
 
 if (!isset($conn) || $conn === null) {
@@ -12,11 +13,14 @@ if (!isset($conn) || $conn === null) {
 
 $requerimientoModel = new RequerimientoModel($conn);
 $model = new DetalleRequerimientoModel($conn);
+$distribucionModel = new DistribucionDetalleModel($conn);
 $action = $_GET['action'] ?? 'requerimiento';
 $vistaActual = 'detalle';
 $requerimiento = null;
 $detalles = [];
 $catalogoOpciones = [];
+$centrosCostoDistribucion = [];
+$subCentrosCostoDistribucion = [];
 $idUsuarioSesion = isset($_SESSION['usuario_id']) ? (int) $_SESSION['usuario_id'] : null;
 
 function normalizarClasificadorDetalle($valor)
@@ -45,6 +49,8 @@ switch ($action) {
 			$requerimiento = $requerimientoModel->obtenerRequerimientoPorId($id);
 			$detalles = $model->listarDetallesPorRequerimiento($id);
 			$catalogoOpciones = $model->listarOpcionesCatalogoTecnologico();
+			$centrosCostoDistribucion = $requerimientoModel->obtenerCentrosCosto();
+			$subCentrosCostoDistribucion = $requerimientoModel->obtenerSubCentrosCostoActivos();
 		}
 		if (!$requerimiento) {
 			adqRedirigirSeguro('index.php?module=adquisiciones&action=requerimientos');
@@ -109,6 +115,71 @@ switch ($action) {
 			}
 		} else {
 			echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
+		}
+		exit;
+
+	case 'obtenerDistribucionDetalleAjax':
+		ini_set('display_errors', '0');
+		ini_set('display_startup_errors', '0');
+		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
+		$idDetalle = isset($_GET['idDetalle']) ? (int) $_GET['idDetalle'] : 0;
+		if ($idDetalle <= 0) {
+			echo json_encode(['success' => false, 'message' => 'Detalle inválido']);
+			exit;
+		}
+
+		$distribuciones = $distribucionModel->listarPorDetalle($idDetalle);
+		echo json_encode(['success' => true, 'distribuciones' => $distribuciones]);
+		exit;
+
+	case 'guardarDistribucionDetalleAjax':
+		ini_set('display_errors', '0');
+		ini_set('display_startup_errors', '0');
+		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
+		$id = isset($_POST['Id']) ? (int) $_POST['Id'] : 0;
+		$datos = [
+			'IdDetalleRequerimiento' => isset($_POST['IdDetalleRequerimiento']) ? (int) $_POST['IdDetalleRequerimiento'] : 0,
+			'IdCentroCosto' => isset($_POST['IdCentroCosto']) ? (int) $_POST['IdCentroCosto'] : 0,
+			'IdSubCentroCosto' => isset($_POST['IdSubCentroCosto']) && $_POST['IdSubCentroCosto'] !== '' ? (int) $_POST['IdSubCentroCosto'] : null,
+			'Cantidad' => isset($_POST['Cantidad']) ? (int) $_POST['Cantidad'] : 0,
+			'IdUsuarioRegistro' => $idUsuarioSesion,
+			'IdUsuarioModifica' => $idUsuarioSesion,
+		];
+
+		if ($datos['IdDetalleRequerimiento'] > 0 && $datos['IdCentroCosto'] > 0 && $datos['Cantidad'] > 0) {
+			if ($distribucionModel->existeDistribucionDuplicada($datos['IdDetalleRequerimiento'], $datos['IdCentroCosto'], $datos['IdSubCentroCosto'], $id)) {
+				echo json_encode(['success' => false, 'message' => 'Ya existe una distribución para el mismo centro/subcentro.']);
+				exit;
+			}
+			if ($id > 0) {
+				$success = $distribucionModel->actualizar($id, $datos);
+				if ($success) {
+					echo json_encode(['success' => true, 'message' => 'Distribución actualizada correctamente']);
+				} else {
+					echo json_encode(['success' => false, 'message' => 'No se pudo actualizar la distribución']);
+				}
+			} else {
+				$newId = $distribucionModel->guardar($datos);
+				if ($newId) {
+					echo json_encode(['success' => true, 'message' => 'Distribución registrada correctamente', 'id' => $newId]);
+				} else {
+					echo json_encode(['success' => false, 'message' => 'No se pudo guardar la distribución']);
+				}
+			}
+		} else {
+			echo json_encode(['success' => false, 'message' => 'Datos incompletos para la distribución']);
+		}
+		exit;
+
+	case 'eliminarDistribucionDetalleAjax':
+		ini_set('display_errors', '0');
+		ini_set('display_startup_errors', '0');
+		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
+		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+		if ($id > 0 && $distribucionModel->eliminar($id)) {
+			echo json_encode(['success' => true, 'message' => 'Distribución eliminada correctamente']);
+		} else {
+			echo json_encode(['success' => false, 'message' => 'No se pudo eliminar la distribución']);
 		}
 		exit;
 

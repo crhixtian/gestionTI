@@ -452,7 +452,8 @@ class RequerimientoModel
 
 	public function obtenerConsolidado($anio = null)
 	{
-		// Consulta que obtiene equipos agrupados por centro/sub-centro de costo
+		// Consulta que obtiene equipos agrupados por centro/sub-centro de costo.
+		// Si existe distribución por detalle, se toma el centro y subcentro de la tabla DistribucionDetalle.
 		$sql = "
 			SELECT 
 				UPPER(
@@ -464,13 +465,14 @@ class RequerimientoModel
 				MAX(UPPER(LTRIM(RTRIM(ISNULL(tsa.NombreTipoSolicitud, ''))))) AS TipoSolicitud,
 				c.Id AS IdCentroCosto,
 				c.Siglas AS CentroCosto,
-				r.IdSubCentroCosto,
+				CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdSubCentroCosto ELSE r.IdSubCentroCosto END AS IdSubCentroCosto,
 				sc.Siglas AS SubCentroCosto,
-				SUM(d.Cantidad) AS Cantidad
+				SUM(COALESCE(dist.Cantidad, d.Cantidad)) AS Cantidad
 			FROM adquisiciones.DetalleRequerimiento d
 			INNER JOIN adquisiciones.Requerimiento r ON r.Id = d.IdRequerimiento
-			INNER JOIN adquisiciones.CentroCosto c ON c.Id = r.IdCentroCosto
-			LEFT JOIN adquisiciones.SubCentroCosto sc ON sc.Id = r.IdSubCentroCosto
+			LEFT JOIN adquisiciones.DistribucionDetalle dist ON dist.IdDetalleRequerimiento = d.Id
+			LEFT JOIN adquisiciones.CentroCosto c ON c.Id = CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdCentroCosto ELSE r.IdCentroCosto END
+			LEFT JOIN adquisiciones.SubCentroCosto sc ON sc.Id = CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdSubCentroCosto ELSE r.IdSubCentroCosto END
 			LEFT JOIN adquisiciones.CatalogoTecnologico ct ON ct.Id = d.IdCatalogoTecnologico AND ct.Activo = 1
 			OUTER APPLY (
 				SELECT TOP 1 ts.Nombre AS NombreTipoSolicitud
@@ -489,7 +491,7 @@ class RequerimientoModel
 		}
 
 			$sql .= "
-				GROUP BY ct.Codigo, ct.NombreGenerico, c.Id, c.Siglas, r.IdSubCentroCosto, sc.Siglas
+				GROUP BY ct.Codigo, ct.NombreGenerico, c.Id, c.Siglas, CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdSubCentroCosto ELSE r.IdSubCentroCosto END, sc.Siglas
 				ORDER BY
 					CASE
 						WHEN PATINDEX('%[0-9]%', ct.Codigo) > 0 THEN LEFT(ct.Codigo, PATINDEX('%[0-9]%', ct.Codigo) - 1)
