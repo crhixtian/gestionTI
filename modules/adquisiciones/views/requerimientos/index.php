@@ -1,3 +1,4 @@
+<!-- Encabezado con filtro de año y botones de acción (importar y agregar requerimiento) -->
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 	<?php $metasSiafActivasLista = (isset($metasSiafActivas) && is_array($metasSiafActivas)) ? $metasSiafActivas : []; ?>
 	<?php $subCentrosCostoLista = (isset($subCentrosCosto) && is_array($subCentrosCosto)) ? $subCentrosCosto : []; ?>
@@ -25,6 +26,7 @@
 	</div>
 </div>
 
+<!-- Tabla responsiva que lista todos los requerimientos con columnas principales y botones de acción -->
 <div class="table-responsive">
 	<table class="table table-vcenter card-table table-striped">
 		<thead>
@@ -234,6 +236,7 @@
 <script>
 	window.adqSubCentrosCostoData = <?php echo json_encode($subCentrosCostoLista, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 
+	// Codifica caracteres especiales de HTML para prevenir inyecciones XSS
 	function escapeHtml(texto) {
 		return String(texto)
 			.replace(/&/g, '&amp;')
@@ -243,6 +246,7 @@
 			.replace(/'/g, '&#039;');
 	}
 
+	// Verifica si la tabla está vacía y muestra mensaje correspondiente
 	function asegurarEstadoVacioTablaRequerimientos() {
 		const tbody = document.getElementById('tabla-requerimientos-body');
 		if (!tbody) return;
@@ -253,6 +257,7 @@
 		}
 	}
 
+	// Formatea el nombre del centro con su subcentro en HTML
 	function construirNombreCentroCosto(centroCosto, subCentroCosto) {
 		if (subCentroCosto) {
 			return '<div>' + escapeHtml(centroCosto) + '</div><div class="text-secondary small">' + escapeHtml(subCentroCosto) + '</div>';
@@ -261,6 +266,7 @@
 		return escapeHtml(centroCosto);
 	}
 
+	// Genera el HTML de una fila de tabla con todos los datos del requerimiento
 	function construirFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado) {
 		const badgeEstado = parseInt(estado, 10) === 1 ?
 			'<span class="badge bg-success-lt">Completo</span>' :
@@ -293,6 +299,7 @@
 		].join('');
 	}
 
+	// Agrega una nueva fila a la tabla de requerimientos
 	function agregarFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado) {
 		const tbody = document.getElementById('tabla-requerimientos-body');
 		if (!tbody) return;
@@ -305,6 +312,7 @@
 		tbody.insertAdjacentHTML('beforeend', construirFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado));
 	}
 
+	// Actualiza una fila existente o la agrega si no existe
 	function actualizarFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado) {
 		const tbody = document.getElementById('tabla-requerimientos-body');
 		if (!tbody) return;
@@ -320,6 +328,7 @@
 		tbody.insertAdjacentHTML('beforeend', htmlFila);
 	}
 
+	// Obtiene los subcentros de costo que pertenecen a un centro específico
 	function obtenerSubCentrosPorCentro(idCentroCosto) {
 		const idCentro = parseInt(idCentroCosto, 10) || 0;
 		const subCentrosCostoData = Array.isArray(window.adqSubCentrosCostoData) ? window.adqSubCentrosCostoData : [];
@@ -328,6 +337,7 @@
 		});
 	}
 
+	// Carga las opciones de subcentros en el select basado en el centro seleccionado
 	function poblarSubCentrosCosto(idCentroCosto, idSeleccionado) {
 		const selectSubCentro = document.getElementById('IdSubCentroCosto');
 		if (!selectSubCentro) return;
@@ -354,6 +364,7 @@
 		});
 	}
 
+	// Inicializa el formulario modal para crear un nuevo requerimiento
 	function nuevoRequerimiento() {
 		const form = document.getElementById('form-requerimiento');
 		if (form) {
@@ -391,6 +402,7 @@
 		}
 	}
 
+	// Carga los datos de un requerimiento en el formulario para edición
 	function editarRequerimiento(id) {
 		const fila = document.querySelector('tr[data-id="' + id + '"]');
 		if (!fila) {
@@ -430,6 +442,7 @@
 		}
 	}
 
+	// Filtra los requerimientos mostrados según el año seleccionado
 	function filtrarPorAnio() {
 		const filtro = document.getElementById('filtroAnio');
 		const anio = filtro ? filtro.value : '';
@@ -441,6 +454,7 @@
 		window.location.href = url;
 	}
 
+	// Abre el modal de importación de pedidos desde SIGA
 	function abrirModalImportar() {
 		const resultados = document.getElementById('siga-resultados');
 		const sinResultados = document.getElementById('siga-sin-resultados');
@@ -457,6 +471,7 @@
 		}
 	}
 
+	// Bandera para indicar si se debe recargar la lista después de importar
 	var debeRecargarRequerimientos = false;
 
 	var modalImportarSiga = document.getElementById('modal-importar-siga');
@@ -471,6 +486,7 @@
 		});
 	}
 
+	// Event listener para validar entrada numérica en el campo de año en el modal de importación
 	var inputAnioImportar = document.getElementById('anio-importar');
 	if (inputAnioImportar) {
 		inputAnioImportar.addEventListener('input', function() {
@@ -478,6 +494,7 @@
 		});
 	}
 
+	// Event listener para validar entrada numérica en el campo de año en el formulario de requerimiento
 	var inputAnioRequerimiento = document.getElementById('Anio');
 	if (inputAnioRequerimiento) {
 		inputAnioRequerimiento.addEventListener('input', function() {
@@ -485,6 +502,7 @@
 		});
 	}
 
+	// Event listener para validar entrada alfanumérica en el código meta
 	var inputCodigoMeta = document.getElementById('CodigoMeta');
 	if (inputCodigoMeta) {
 		inputCodigoMeta.addEventListener('input', function() {
@@ -492,6 +510,7 @@
 		});
 	}
 
+	// Event listener para actualizar subcentros cuando cambia el centro de costo seleccionado
 	var selectCentroCostoRequerimiento = document.getElementById('IdCentroCosto');
 	if (selectCentroCostoRequerimiento) {
 		selectCentroCostoRequerimiento.addEventListener('change', function() {
@@ -499,7 +518,7 @@
 		});
 	}
 
-	// Buscar pedidos en SIGA
+	// Event listener para buscar pedidos en SIGA por año
 	var btnBuscarSiga = document.getElementById('btn-buscar-siga');
 	if (btnBuscarSiga) {
 		btnBuscarSiga.addEventListener('click', function() {
@@ -591,7 +610,7 @@
 		});
 	}
 
-	// Importar un pedido individual
+	// Importa un pedido individual desde SIGA y actualiza su estado en la tabla
 	function importarPedido(nroPedido, anio, btn) {
 		btn.disabled = true;
 		btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
@@ -633,6 +652,7 @@
 			});
 	}
 
+	// Event listener para guardar o actualizar un requerimiento desde el formulario
 	var formRequerimiento = document.getElementById('form-requerimiento');
 	if (formRequerimiento) {
 		formRequerimiento.addEventListener('submit', function(e) {
@@ -706,6 +726,7 @@
 		});
 	}
 
+	// Navega a la página de detalles de un requerimiento específico
 	function detalleRequerimiento(id) {
 		const url = 'index.php?module=adquisiciones&action=requerimiento&id=' + id;
 		if (typeof window.cargarVistaAdquisiciones === 'function') {
@@ -715,6 +736,7 @@
 		window.location.href = url;
 	}
 
+	// Solicita confirmación y elimina un requerimiento y sus detalles
 	async function eliminarRequerimiento(id) {
 		const confirmado = await window.adqConfirmSafe({
 			titulo: 'Confirmar eliminacion',

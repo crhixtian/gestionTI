@@ -4,6 +4,7 @@ require_once 'modules/adquisiciones/models/CatalogoTecnologicoModel.php';
 require_once 'modules/adquisiciones/models/CierreAdquisicionModel.php';
 require_once 'modules/adquisiciones/helpers.php';
 
+// Carga la vista de requerimientos con filtros por año y opciones de distribución
 function cargarVistaRequerimientos($model, $anioFiltro, &$vistaActual, &$requerimientos, &$centrosCosto, &$subCentrosCosto, &$aniosDisponibles, &$metasSiafActivas)
 {
 	$vistaActual = 'requerimientos';
@@ -17,6 +18,7 @@ function cargarVistaRequerimientos($model, $anioFiltro, &$vistaActual, &$requeri
 	return $anioFiltro;
 }
 
+// Resuelve el año de filtro priorizando el año solicitado o el año actual o el primer año disponible
 function resolverAnioFiltro($anioSolicitado, array $aniosDisponibles)
 {
 	if ($anioSolicitado !== null && $anioSolicitado > 0) {
@@ -35,12 +37,14 @@ function resolverAnioFiltro($anioSolicitado, array $aniosDisponibles)
 	return $anioActual;
 }
 
+// Delega la ejecución a otro controlador específico incluyendo su archivo
 function delegarControladorAdquisiciones($ruta)
 {
 	include $ruta;
 	exit;
 }
 
+// Genera y descarga un archivo XLSX con el consolidado de equipos por centro de costo (formato no oficial)
 function descargarConsolidadoNoOficialXlsx($model, $anioSolicitado)
 {
 	// Evita que avisos E_DEPRECATED de dependencias antiguas contaminen la salida binaria del XLSX.
@@ -279,6 +283,7 @@ function descargarConsolidadoNoOficialXlsx($model, $anioSolicitado)
 	exit;
 }
 
+// Genera y descarga un archivo XLSX con el consolidado oficial incluyendo metas SIAF y cálculos de montos
 function descargarConsolidadoOficialXlsx($model, $anioSolicitado)
 {
 	error_reporting(error_reporting() & ~E_DEPRECATED & ~E_USER_DEPRECATED);
@@ -518,6 +523,7 @@ function descargarConsolidadoOficialXlsx($model, $anioSolicitado)
 	exit;
 }
 
+// Garantiza una conexion activa cuando el controlador se ejecuta de forma directa.
 if (!isset($conn) || $conn === null) {
 	if (!class_exists('Conexion')) {
 		require_once 'config/db.php';
@@ -525,6 +531,7 @@ if (!isset($conn) || $conn === null) {
 	$conn = Conexion::conectar();
 }
 
+// Inicializa el modelo, la accion solicitada y los datos base de las vistas.
 $model = new RequerimientoModel($conn);
 $action = $_GET['action'] ?? 'requerimientos';
 $vistaActual = 'requerimientos';
@@ -542,6 +549,7 @@ $dashboardOrdenesProximas = [];
 $dashboardMetaSiaf = [];
 $dashboardSubCentrosCosto = [];
 $idUsuarioSesion = isset($_SESSION['usuario_id']) ? (int) $_SESSION['usuario_id'] : null;
+// Define las acciones que deben resolverse en controladores especializados.
 $accionesDetalle = ['guardarDetalleAjax', 'actualizarDetalleAjax', 'eliminarDetalleAjax', 'actualizarEstadoAjax', 'guardarDetalleForm', 'obtenerDistribucionDetalleAjax', 'guardarDistribucionDetalleAjax', 'eliminarDistribucionDetalleAjax'];
 $accionesTecnologia = [
 	'tecnologia',
@@ -569,24 +577,30 @@ $accionesTecnologia = [
 	'guardarPresupuestoTecnologiaAjax',
 ];
 
+// Redirige la ruta singular antigua al controlador de detalle.
 if ($action === 'requerimiento') {
 	delegarControladorAdquisiciones('modules/adquisiciones/controllers/DetalleRequerimientoController.php');
 }
 
+// Delega las acciones de detalle de requerimiento a su controlador.
 if (in_array($action, $accionesDetalle, true)) {
 	delegarControladorAdquisiciones('modules/adquisiciones/controllers/DetalleRequerimientoController.php');
 }
 
+// Delega las acciones documentales de tecnologia a su controlador.
 if (in_array($action, $accionesTecnologia, true)) {
 	delegarControladorAdquisiciones('modules/adquisiciones/controllers/EspecificacionTecnicaController.php');
 }
 
+// Resuelve la accion principal solicitada para renderizar vistas o responder AJAX.
 switch ($action) {
+	// Carga la lista de requerimientos con opciones de filtro por año
 	case 'index':
 	case 'requerimientos':
 		$anioFiltro = cargarVistaRequerimientos($model, $anioFiltro, $vistaActual, $requerimientos, $centrosCosto, $subCentrosCosto, $aniosDisponibles, $metasSiafActivas);
 		break;
 
+	// Carga la lista de tecnologías con estado de fichas técnicas
 	case 'tecnologias':
 		$vistaActual = 'tecnologias';
 		$catalogoModel = new CatalogoTecnologicoModel($conn);
@@ -596,6 +610,7 @@ switch ($action) {
 		$tecnologias = $catalogoModel->listarConEstadoFicha($anioTecnologias);
 		break;
 
+	// Carga la vista de consolidado de equipos por centro de costo
 	case 'consolidado':
 		$vistaActual = 'consolidado';
 		$aniosDisponibles = $model->obtenerAniosDisponibles();
@@ -604,6 +619,7 @@ switch ($action) {
 		$consolidadoCabeceraExportacion = $model->obtenerCabeceraConsolidadoCompleta();
 		break;
 
+	// Obtiene datos del consolidado en formato oficial con metas SIAF vía JSON
 	case 'consolidadoFormatoOficialAjax':
 		header('Content-Type: application/json');
 		$aniosDisponibles = $model->obtenerAniosDisponibles();
@@ -619,10 +635,12 @@ switch ($action) {
 		]);
 		exit;
 
+	// Descarga consolidado oficial en formato XLSX
 	case 'consolidadoOficialXlsxAjax':
 		descargarConsolidadoOficialXlsx($model, $anioFiltro);
 		exit;
 
+	// Obtiene la cabecera de exportación del consolidado vía JSON
 	case 'consolidadoCabeceraExportacionAjax':
 		header('Content-Type: application/json');
 		$cabeceraCompleta = $model->obtenerCabeceraConsolidadoCompleta();
@@ -633,10 +651,12 @@ switch ($action) {
 		]);
 		exit;
 
+	// Descarga consolidado no oficial en formato XLSX
 	case 'consolidadoNoOficialXlsxAjax':
 		descargarConsolidadoNoOficialXlsx($model, $anioFiltro);
 		exit;
 
+	// Carga la vista del dashboard con resúmenes y estadísticas del año
 	case 'dashboard':
 		$vistaActual = 'dashboard';
 		$aniosDisponibles = $model->obtenerAniosDisponibles();
@@ -653,6 +673,7 @@ switch ($action) {
 		$dashboardFinalizados = $cierreModel->contarFinalizadosPorAnio($anioFiltro);
 		break;
 
+	// Guarda un nuevo requerimiento vía AJAX validando duplicados
 	case 'guardarAjax':
 		header('Content-Type: application/json');
 
@@ -686,6 +707,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Actualiza un requerimiento existente vía AJAX
 	case 'actualizarAjax':
 		header('Content-Type: application/json');
 
@@ -718,6 +740,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Guarda o actualiza un requerimiento mediante formulario HTML con redireccionamiento
 	case 'guardarForm':
 		$idRequerimiento = isset($_POST['Id']) ? (int) $_POST['Id'] : 0;
 		$datos = [
@@ -746,6 +769,7 @@ switch ($action) {
 		adqRedirigirSeguro($urlRedirect);
 		break;
 
+	// Elimina un requerimiento vía AJAX
 	case 'eliminarAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -762,6 +786,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Busca pedidos en SIGA para un año específico vía AJAX
 	case 'buscarPedidosSigaAjax':
 		header('Content-Type: application/json');
 		$anio = isset($_POST['anio']) ? (int) $_POST['anio'] : 0;
@@ -779,6 +804,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Importa un pedido desde SIGA creando el requerimiento y sus detalles
 	case 'importarPedidoSigaAjax':
 		header('Content-Type: application/json');
 		$nroPedido = isset($_POST['nro_pedido']) ? trim($_POST['nro_pedido']) : '';
@@ -800,6 +826,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Sincroniza la homologación de tecnologías entre sistemas
 	case 'sincronizarHomologacionAjax':
 		header('Content-Type: application/json');
 		try {
@@ -815,6 +842,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Agrega una nueva tecnología al catálogo
 	case 'agregarTecnologiaAjax':
 		header('Content-Type: application/json');
 		$codigo = isset($_POST['codigo']) ? trim((string) $_POST['codigo']) : '';
@@ -833,6 +861,7 @@ switch ($action) {
 		echo json_encode($resultado);
 		exit;
 
+	// Lista todos los centros de costo disponibles
 	case 'listarCentrosCostoAjax':
 		header('Content-Type: application/json');
 		echo json_encode([
@@ -841,6 +870,7 @@ switch ($action) {
 		]);
 		exit;
 
+	// Agrega un nuevo centro de costo
 	case 'agregarCentroCostoAjax':
 		header('Content-Type: application/json');
 		$siglas = isset($_POST['siglas']) ? trim((string) $_POST['siglas']) : '';
@@ -848,6 +878,7 @@ switch ($action) {
 		echo json_encode($model->agregarCentroCosto($siglas, $nombreCentroCosto));
 		exit;
 
+	// Actualiza los datos de un centro de costo
 	case 'actualizarCentroCostoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -856,18 +887,21 @@ switch ($action) {
 		echo json_encode($model->actualizarCentroCosto($id, $siglas, $nombreCentroCosto));
 		exit;
 
+	// Elimina un centro de costo
 	case 'eliminarCentroCostoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 		echo json_encode($model->eliminarCentroCosto($id));
 		exit;
 
+	// Activa un centro de costo desactivado
 	case 'activarCentroCostoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 		echo json_encode($model->activarCentroCosto($id));
 		exit;
 
+	// Lista todas las tecnologías activas del catálogo
 	case 'listarTecnologiasCatalogoAjax':
 		header('Content-Type: application/json');
 		$catalogoModel = new CatalogoTecnologicoModel($conn);
@@ -877,6 +911,7 @@ switch ($action) {
 		]);
 		exit;
 
+	// Actualiza los datos de una tecnología del catálogo
 	case 'actualizarTecnologiaCatalogoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -886,6 +921,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->actualizarTecnologia($id, $codigo, $nombreGenerico));
 		exit;
 
+	// Elimina una tecnología del catálogo
 	case 'eliminarTecnologiaCatalogoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -893,6 +929,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->eliminarTecnologia($id));
 		exit;
 
+	// Activa una tecnología del catálogo desactivada
 	case 'activarTecnologiaCatalogoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -900,6 +937,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->activarTecnologia($id));
 		exit;
 
+	// Lista todos los tipos de solicitud disponibles
 	case 'listarTiposSolicitudAjax':
 		header('Content-Type: application/json');
 		$catalogoModel = new CatalogoTecnologicoModel($conn);
@@ -909,6 +947,7 @@ switch ($action) {
 		]);
 		exit;
 
+	// Agrega un nuevo tipo de solicitud
 	case 'agregarTipoSolicitudAjax':
 		header('Content-Type: application/json');
 		$nombre = isset($_POST['nombre']) ? trim((string) $_POST['nombre']) : '';
@@ -916,6 +955,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->agregarTipoSolicitud($nombre, $idUsuarioSesion));
 		exit;
 
+	// Actualiza los datos de un tipo de solicitud
 	case 'actualizarTipoSolicitudAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -924,6 +964,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->actualizarTipoSolicitud($id, $nombre, $idUsuarioSesion));
 		exit;
 
+	// Elimina un tipo de solicitud
 	case 'eliminarTipoSolicitudAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -931,6 +972,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->eliminarTipoSolicitud($id, $idUsuarioSesion));
 		exit;
 
+	// Activa un tipo de solicitud desactivado
 	case 'activarTipoSolicitudAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -938,6 +980,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->activarTipoSolicitud($id, $idUsuarioSesion));
 		exit;
 
+	// Obtiene las asociaciones entre tecnologías y tipos de solicitud para un año
 	case 'listarTecnologiaTipoSolicitudAjax':
 		header('Content-Type: application/json');
 		$anio = isset($_GET['anio']) ? (int) $_GET['anio'] : (int) date('Y');
@@ -955,6 +998,7 @@ switch ($action) {
 		]);
 		exit;
 
+	// Guarda una asociación entre una tecnología y un tipo de solicitud
 	case 'guardarTecnologiaTipoSolicitudAjax':
 		header('Content-Type: application/json');
 		$idCatalogoTecnologico = isset($_POST['idCatalogoTecnologico']) ? (int) $_POST['idCatalogoTecnologico'] : 0;
@@ -964,6 +1008,7 @@ switch ($action) {
 		echo json_encode($catalogoModel->guardarAsociacionTecnologiaTipoSolicitud($idCatalogoTecnologico, $idTipoSolicitud, $anioAsociacion, $idUsuarioSesion));
 		exit;
 
+	// Lista todas las metas SIAF disponibles
 	case 'listarMetasSiafAjax':
 		header('Content-Type: application/json');
 		echo json_encode([
@@ -972,6 +1017,7 @@ switch ($action) {
 		]);
 		exit;
 
+	// Agrega una nueva meta SIAF
 	case 'agregarMetaSiafAjax':
 		header('Content-Type: application/json');
 		$codigoMeta = isset($_POST['codigoMeta']) ? trim((string) $_POST['codigoMeta']) : '';
@@ -979,6 +1025,7 @@ switch ($action) {
 		echo json_encode($model->agregarMetaSiaf($codigoMeta, $descripcion, $idUsuarioSesion));
 		exit;
 
+	// Actualiza los datos de una meta SIAF
 	case 'actualizarMetaSiafAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -987,18 +1034,21 @@ switch ($action) {
 		echo json_encode($model->actualizarMetaSiaf($id, $codigoMeta, $descripcion, $idUsuarioSesion));
 		exit;
 
+	// Elimina una meta SIAF
 	case 'eliminarMetaSiafAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 		echo json_encode($model->eliminarMetaSiaf($id, $idUsuarioSesion));
 		exit;
 
+	// Activa una meta SIAF desactivada
 	case 'activarMetaSiafAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 		echo json_encode($model->activarMetaSiaf($id, $idUsuarioSesion));
 		exit;
 
+	// Lista todos los subcentros de costo disponibles
 	case 'listarSubCentrosCostoAjax':
 		header('Content-Type: application/json');
 		echo json_encode([
@@ -1008,6 +1058,7 @@ switch ($action) {
 		]);
 		exit;
 
+	// Agrega un nuevo subcentro de costo
 	case 'agregarSubCentroCostoAjax':
 		header('Content-Type: application/json');
 		$idCC   = isset($_POST['idCentroCosto']) ? (int) $_POST['idCentroCosto'] : 0;
@@ -1016,6 +1067,7 @@ switch ($action) {
 		echo json_encode($model->agregarSubCentroCosto($idCC, $siglas, $nombre, $idUsuarioSesion));
 		exit;
 
+	// Actualiza los datos de un subcentro de costo
 	case 'actualizarSubCentroCostoAjax':
 		header('Content-Type: application/json');
 		$id     = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -1025,21 +1077,25 @@ switch ($action) {
 		echo json_encode($model->actualizarSubCentroCosto($id, $idCC, $siglas, $nombre, $idUsuarioSesion));
 		exit;
 
+	// Elimina un subcentro de costo
 	case 'eliminarSubCentroCostoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 		echo json_encode($model->eliminarSubCentroCosto($id));
 		exit;
 
+	// Activa un subcentro de costo desactivado
 	case 'activarSubCentroCostoAjax':
 		header('Content-Type: application/json');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 		echo json_encode($model->activarSubCentroCosto($id));
 		exit;
 
+	// Carga la vista predeterminada de requerimientos
 	default:
 		$anioFiltro = cargarVistaRequerimientos($model, $anioFiltro, $vistaActual, $requerimientos, $centrosCosto, $subCentrosCosto, $aniosDisponibles, $metasSiafActivas);
 		break;
 }
 
+// Renderiza la plantilla principal de adquisiciones con los datos preparados.
 include 'modules/adquisiciones/views/index.php';

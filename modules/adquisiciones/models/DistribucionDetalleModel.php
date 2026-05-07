@@ -4,6 +4,7 @@ class DistribucionDetalleModel
 {
     private $db;
 
+    // Inicializa el modelo con la conexión de base de datos
     public function __construct($db)
     {
         $this->db = $db;
@@ -68,6 +69,7 @@ class DistribucionDetalleModel
         return $row ? $row : null;
     }
 
+    // Inserta una nueva distribución para un detalle y devuelve su ID generado
     public function guardar($datos)
     {
         $sql = "
@@ -154,6 +156,7 @@ class DistribucionDetalleModel
         return $row ? true : false;
     }
 
+    // Elimina una distribución por su ID
     public function eliminar($id)
     {
         $sql = "DELETE FROM adquisiciones.DistribucionDetalle WHERE Id = ?";
@@ -161,6 +164,7 @@ class DistribucionDetalleModel
         return $stmt !== false;
     }
 
+    // Calcula el total distribuido para un detalle de requerimiento
     public function obtenerTotalDistribuidoPorDetalle($idDetalleRequerimiento)
     {
         $sql = "

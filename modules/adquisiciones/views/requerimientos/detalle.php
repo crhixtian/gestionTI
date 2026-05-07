@@ -1,4 +1,5 @@
-﻿<div class="d-flex justify-content-between align-items-center mb-3">
+﻿<!-- Encabezado con título, estado del requerimiento y botones de acción -->
+<div class="d-flex justify-content-between align-items-center mb-3">
 	<div>
 		<h3 class="mb-0">Pedido de Compra: <?php echo htmlspecialchars($requerimiento['NroPedidoCompra']); ?></h3>
 		<span id="estado-requerimiento-badge">
@@ -18,6 +19,7 @@
 	</div>
 </div>
 
+<!-- Tarjeta con información del centro, meta y año del requerimiento -->
 <div class="card mb-3">
 	<div class="card-body">
 		<div class="row">
@@ -41,6 +43,7 @@
 	</div>
 </div>
 
+<!-- Encabezado y botón para agregar nuevos ítems al requerimiento -->
 <div class="d-flex justify-content-between align-items-center mb-3">
 	<h4 class="mb-0">Ítems Registrados</h4>
 	<button
@@ -52,6 +55,7 @@
 		onclick="nuevoDetalle()">Agregar Ítem</button>
 </div>
 
+<!-- Tabla responsiva que lista todos los ítems del requerimiento -->
 <div class="table-responsive">
 	<table class="table table-vcenter card-table table-striped">
 		<thead>
@@ -79,17 +83,20 @@
 						<td><?php echo htmlspecialchars($detalle['CodigoSiga']); ?></td>
 						<td><?php echo htmlspecialchars((string) ($detalle['Clasificador'] ?? '')); ?></td>
 						<td><?php echo htmlspecialchars($detalle['DescripcionDetallada']); ?></td>
-					<td><?php echo (int) $detalle['Cantidad']; ?></td>
-					<td>
-						<button type="button"
-							class="btn btn-sm btn-outline-secondary"
-							onclick="abrirDistribucionDetalle(<?php echo (int) $detalle['Id']; ?>)">
-							Distribuir
-						</button>
-					</td>
-					<td><?php echo htmlspecialchars((string) ($detalle['CodigoTecnologia'] ?? '')); ?></td>
+						<td><?php echo (int) $detalle['Cantidad']; ?></td>
+						<td>
+							<div class="d-flex gap-2">
+								<span><?php echo htmlspecialchars((string) ($detalle['CodigoTecnologia'] ?? '')); ?></span>
+							</div>
+						</td>
 						<td class="text-end align-middle">
 							<div class="btn-group" role="group">
+								<button type="button"
+									class="btn btn-icon btn-lg"
+									title="Detalles"
+									onclick="abrirDistribucionDetalle(<?php echo (int) $detalle['Id']; ?>)">
+									<i class="ti ti-adjustments fs-2"></i>
+								</button>
 								<button type="button"
 									class="btn btn-icon btn-lg"
 									title="Editar"
@@ -115,6 +122,7 @@
 	</table>
 </div>
 
+<!-- Botón para regresar a la lista de requerimientos -->
 <div class="mt-3">
 	<button class="btn btn-secondary" onclick="volver()">Volver</button>
 </div>
@@ -133,7 +141,7 @@
 	}
 </style>
 
-<!-- Modal Nuevo/Editar Detalle -->
+<!-- Modal para crear o editar items del requerimiento -->
 <div class="modal modal-blur fade" id="modal-detalle" tabindex="-1" role="dialog" aria-hidden="true">
 	<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
 		<div class="modal-content">
@@ -189,8 +197,9 @@
 	</div>
 </div>
 
+<!-- Modal para distribuir la cantidad de un ítem entre centros y subcentros de costo -->
 <div class="modal modal-blur fade" id="modal-distribucion-detalle" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+	<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
 				<h5 class="modal-title" id="modal-distribucion-detalle-title">Distribución por Ítem</h5>
@@ -264,6 +273,7 @@
 	let modoEdicion = false;
 	let estadoActualRequerimiento = <?php echo (int) $requerimiento['Estado']; ?>;
 
+	// Retorna la descripción formateada del pedido incluyendo número y código meta si aplica
 	function descripcionPedidoConMeta() {
 		if (codigoMetaRequerimiento) {
 			return 'Pedido de Compra ' + nroPedidoCompra + ' - Meta ' + codigoMetaRequerimiento;
@@ -272,6 +282,7 @@
 		return 'Pedido de Compra ' + nroPedidoCompra;
 	}
 
+	// Asigna un valor a un elemento del DOM identificado por su id
 	function setValue(id, value) {
 		const el = document.getElementById(id);
 		if (el) {
@@ -279,6 +290,7 @@
 		}
 	}
 
+	// Establece el contenido de texto de un elemento del DOM identificado por su id
 	function setText(id, text) {
 		const el = document.getElementById(id);
 		if (el) {
@@ -286,6 +298,7 @@
 		}
 	}
 
+	// Codifica caracteres especiales de HTML para prevenir inyecciones XSS
 	function escapeHtml(texto) {
 		return String(texto)
 			.replace(/&/g, '&amp;')
@@ -295,6 +308,7 @@
 			.replace(/'/g, '&#039;');
 	}
 
+	// Realiza una petición POST con datos de formulario y retorna la respuesta JSON
 	function postForm(action, formData) {
 		return fetch('index.php?module=adquisiciones&action=' + action, {
 			method: 'POST',
@@ -321,6 +335,7 @@
 		});
 	}
 
+	// Convierte un objeto JavaScript a FormData y lo envía mediante postForm
 	function postData(action, dataObject) {
 		const formData = new FormData();
 		Object.keys(dataObject).forEach(function(key) {
@@ -329,6 +344,7 @@
 		return postForm(action, formData);
 	}
 
+	// Obtiene o crea la instancia de Bootstrap Modal para un elemento del DOM
 	function getBootstrapModalInstance(modalEl) {
 		if (!modalEl || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
 			return null;
@@ -336,6 +352,7 @@
 		return bootstrap.Modal.getOrCreateInstance(modalEl);
 	}
 
+	// Abre un modal por su id, con soporte para Bootstrap o fallback manual
 	function showModalById(modalId) {
 		const modalEl = document.getElementById(modalId);
 		if (!modalEl) {
@@ -356,6 +373,7 @@
 		document.body.classList.add('modal-open');
 	}
 
+	// Cierra un modal por su id, con soporte para Bootstrap o fallback manual
 	function hideModalById(modalId) {
 		const modalEl = document.getElementById(modalId);
 		if (!modalEl) {
@@ -375,6 +393,7 @@
 		document.body.classList.remove('modal-open');
 	}
 
+	// Configura manualmente los botones de cierre de modales cuando Bootstrap no está disponible
 	function configurarBotonesModalFallback() {
 		document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function(btn) {
 			btn.addEventListener('click', function() {
@@ -386,6 +405,7 @@
 		});
 	}
 
+	// Navega de vuelta a la lista de requerimientos
 	function volver() {
 		const url = 'index.php?module=adquisiciones&action=requerimientos';
 		if (typeof window.cargarVistaAdquisiciones === 'function') {
@@ -395,6 +415,7 @@
 		window.location.href = url;
 	}
 
+	// Actualiza visualmente el estado del requerimiento (badge y botones de acción)
 	function renderEstadoRequerimiento() {
 		const badgeContenedor = document.getElementById('estado-requerimiento-badge');
 		const accionesContenedor = document.getElementById('estado-requerimiento-acciones');
@@ -412,6 +433,7 @@
 		}
 	}
 
+	// Genera el HTML de una fila de tabla con los datos del ítem y sus botones de acción
 	function construirFilaDetalle(id, valores) {
 		return [
 			'<tr',
@@ -427,11 +449,16 @@
 				'<td>' + escapeHtml(valores.clasificador || '') + '</td>',
 				'<td>' + escapeHtml(valores.descripcionDetallada || '') + '</td>',
 				'<td>' + parseInt(valores.cantidad, 10) + '</td>',
-				'<td>' + escapeHtml(valores.codigoTecnologia || '') + '</td>',
+				'<td>',
+					'<div class="d-flex gap-2">',
+						'<span>' + escapeHtml(valores.codigoTecnologia || '') + '</span>',
+						'<button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirDistribucionDetalle(' + id + ')">Distribuir</button>',
+					'</div>',
+				'</td>',
 				'<td class="text-end align-middle">',
 				'<div class="btn-group" role="group">',
-					'<button type="button" class="btn btn-icon btn-lg" title="Distribuir" onclick="abrirDistribucionDetalle(' + id + ')">',
-						'<i class="ti ti-adjustments-horizontal fs-2"></i>',
+					'<button type="button" class="btn btn-icon btn-lg" title="Detalles" onclick="verDetalles(' + id + ')">',
+						'<i class="ti ti-adjustments fs-2"></i>',
 					'</button>',
 					'<button type="button" class="btn btn-icon btn-lg" title="Editar" onclick="editarDetalle(' + id + ')">',
 						'<i class="ti ti-edit fs-2"></i>',
@@ -445,10 +472,12 @@
 		].join('');
 	}
 
+	// Busca y retorna el elemento fila (tr) de un ítem por su id
 	function obtenerFilaDetallePorId(id) {
 		return document.querySelector('tr[data-id="' + id + '"]');
 	}
 
+	// Carga y actualiza los subcentros de costo disponibles según el centro seleccionado
 	function actualizarSubCentrosDisponibles(idCentroCosto) {
 		const subCentroSelect = document.getElementById('distribucion-IdSubCentroCosto');
 		if (!subCentroSelect) {
@@ -469,6 +498,7 @@
 		});
 	}
 
+	// Calcula y retorna los totales solicitados, distribuidos y el saldo disponible
 	function calcularResumenDistribucion(totalSolicitado, distribuciones) {
 		const totalDistribuido = distribuciones.reduce(function(acc, distribucion) {
 			return acc + (parseInt(distribucion.Cantidad, 10) || 0);
@@ -480,6 +510,7 @@
 		};
 	}
 
+	// Actualiza la tabla de distribuciones y los totales mostrados en el modal
 	function renderDistribuciones(distribuciones, totalSolicitado) {
 		const tabla = document.getElementById('tabla-distribucion-detalle');
 		if (!tabla) {
@@ -510,6 +541,7 @@
 		setText('distribucion-total-saldo', resumen.totalSaldo);
 	}
 
+	// Obtiene del servidor las distribuciones registradas para un ítem específico
 	function cargarDistribucionesDetalle(idDetalle) {
 		return fetch('index.php?module=adquisiciones&action=obtenerDistribucionDetalleAjax&idDetalle=' + encodeURIComponent(idDetalle))
 			.then(function(response) {
@@ -538,6 +570,7 @@
 			});
 	}
 
+	// Abre el modal de distribución para un ítem, cargando sus datos y distribuciones actuales
 	function abrirDistribucionDetalle(idDetalle) {
 		const fila = obtenerFilaDetallePorId(idDetalle);
 		if (!fila) {
@@ -550,7 +583,7 @@
 
 		setValue('distribucion-Id', '');
 		setValue('distribucion-IdDetalleRequerimiento', idDetalle);
-		setText('distribucion-item-info', 'Ítem: ' + codigoSiga + ' - ' + descripcionDetallada);
+		setText('distribucion-item-info', descripcionDetallada);
 		setText('distribucion-total-solicitado', cantidadSolicitada);
 		setValue('distribucion-Cantidad', cantidadSolicitada > 0 ? cantidadSolicitada : 1);
 
@@ -574,6 +607,7 @@
 			});
 	}
 
+	// Valida, procesa y guarda una nueva distribución de ítem al servidor
 	function guardarDistribucionDetalle(event) {
 		event.preventDefault();
 
@@ -641,6 +675,7 @@
 		});
 	}
 
+	// Elimina una distribución de ítem del servidor y actualiza la tabla
 	function eliminarDistribucionDetalle(id) {
 		postData('eliminarDistribucionDetalleAjax', { id: id })
 			.then(function(response) {
@@ -658,6 +693,7 @@
 			});
 	}
 
+	// Inserta una nueva fila o actualiza la existente en la tabla de ítems
 	function upsertFilaDetalle(id, valores, esEdicion) {
 		const tablaBody = document.getElementById('tabla-detalles');
 		if (!tablaBody) {
@@ -684,6 +720,7 @@
 		tablaBody.insertAdjacentHTML('beforeend', htmlFila);
 	}
 
+	// Inicializa el formulario para crear un nuevo ítem y abre el modal
 	function nuevoDetalle() {
 		modoEdicion = false;
 		const form = document.getElementById('form-detalle');
@@ -700,6 +737,7 @@
 		showModalById('modal-detalle');
 	}
 
+	// Obtiene el código de la tecnología seleccionada en el catálogo
 	function obtenerCodigoTecnologiaSeleccionada() {
 		const select = document.getElementById('detalle-IdCatalogoTecnologico');
 		if (!select || !select.options) {
@@ -715,6 +753,7 @@
 		return option && option.dataset ? (option.dataset.codigo || '') : '';
 	}
 
+	// Carga los datos de un ítem en el formulario para edición
 	function editarDetalle(id) {
 		modoEdicion = true;
 
@@ -742,6 +781,37 @@
 		showModalById('modal-detalle');
 	}
 
+	// Muestra una ventana de información con los detalles completos de un ítem
+	function verDetalles(id) {
+		const fila = document.querySelector('tr[data-id="' + id + '"]');
+		if (!fila) {
+			return;
+		}
+
+		const codigoSiga = fila.dataset.codigoSiga || '';
+		const clasificador = fila.dataset.clasificador || '';
+		const descripcionDetallada = fila.dataset.descripcionDetallada || '';
+		const cantidad = fila.dataset.cantidad || '';
+		const unidadMedida = fila.dataset.unidadMedida || '';
+		const codigoTecnologia = fila.dataset.codigoTecnologia || '';
+
+		// Construir mensaje de detalles
+		let mensaje = '<strong>Detalles del Ítem</strong><br>';
+		mensaje += '<strong>Código SIGA:</strong> ' + escapeHtml(codigoSiga) + '<br>';
+		mensaje += '<strong>Clasificador:</strong> ' + escapeHtml(clasificador || 'N/A') + '<br>';
+		mensaje += '<strong>Descripción:</strong> ' + escapeHtml(descripcionDetallada) + '<br>';
+		mensaje += '<strong>Cantidad:</strong> ' + parseInt(cantidad, 10) + ' ' + escapeHtml(unidadMedida) + '<br>';
+		mensaje += '<strong>Tecnología:</strong> ' + escapeHtml(codigoTecnologia || 'No asignada');
+
+		// Mostrar alerta con los detalles
+		if (typeof window.adqAlertSafe === 'function') {
+			window.adqAlertSafe('info', 'Detalles del Ítem', mensaje);
+		} else {
+			alert(codigoSiga + '\n' + descripcionDetallada + '\nCantidad: ' + cantidad + ' ' + unidadMedida);
+		}
+	}
+
+	// Valida y envía el formulario de ítem para guardar o actualizar
 	function guardarDetalle(event) {
 		event.preventDefault();
 
@@ -783,6 +853,7 @@
 			});
 	}
 
+	// Solicita confirmación del usuario y elimina un ítem del requerimiento
 	async function eliminarDetalle(id) {
 		const confirmado = await window.adqConfirmSafe({
 			titulo: 'Confirmar eliminacion',
@@ -808,7 +879,7 @@
 
 					const tablaBody = document.getElementById('tabla-detalles');
 					if (tablaBody && tablaBody.querySelectorAll('tr[data-id]').length === 0) {
-						tablaBody.innerHTML = '<tr><td colspan="7" class="text-center text-secondary">No hay ítems registrados.</td></tr>';
+						tablaBody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary">No hay ítems registrados.</td></tr>';
 					}
 				} else {
 					window.adqNotifySafe('danger', 'No se pudo eliminar', response.message || 'No se pudo eliminar el item.');
@@ -819,6 +890,7 @@
 			});
 	}
 
+	// Actualiza el estado del requerimiento a 'Completo' en el servidor
 	function marcarComoCompleto() {
 		postData('actualizarEstadoAjax', {
 				id: idRequerimiento,
@@ -837,6 +909,7 @@
 			});
 	}
 
+	// Actualiza el estado del requerimiento a 'Pendiente' en el servidor
 	function marcarComoPendiente() {
 		postData('actualizarEstadoAjax', {
 				id: idRequerimiento,
@@ -855,6 +928,7 @@
 			});
 	}
 
+	// Configura todos los eventos y comportamientos interactivos de la página
 	function inicializarVistaDetalleRequerimiento() {
 		const btnAgregar = document.getElementById('btn-agregar-item');
 		const formDetalle = document.getElementById('form-detalle');

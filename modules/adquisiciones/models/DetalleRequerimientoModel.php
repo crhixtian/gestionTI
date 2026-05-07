@@ -8,7 +8,7 @@ class DetalleRequerimientoModel
 		$this->db = $db;
 	}
 
-	
+	// Lista todos los detalles de un requerimiento con información de tecnología
 	public function listarDetallesPorRequerimiento($idRequerimiento)
 	{
 		$sql = "
@@ -42,6 +42,7 @@ class DetalleRequerimientoModel
 		return $data;
 	}
 
+	// Guarda un nuevo detalle de requerimiento retornando su ID generado
 	public function guardarDetalle($datos)
 	{
 		$sql = "INSERT INTO adquisiciones.DetalleRequerimiento 
@@ -72,6 +73,7 @@ class DetalleRequerimientoModel
 		return $row ? $row['Id'] : false;
 	}
 
+	// Actualiza los datos de un detalle de requerimiento existente
 	public function actualizarDetalle($id, $datos)
 	{
 		$sql = "UPDATE adquisiciones.DetalleRequerimiento 
@@ -100,6 +102,7 @@ class DetalleRequerimientoModel
 		return $stmt !== false;
 	}
 
+	// Elimina un detalle de requerimiento por ID
 	public function eliminarDetalle($id)
 	{
 		$sql = "DELETE FROM adquisiciones.DetalleRequerimiento WHERE Id = ?";
@@ -107,6 +110,7 @@ class DetalleRequerimientoModel
 		return $stmt !== false;
 	}
 
+	// Lista todas las tecnologías activas del catálogo como opciones de selección
 	public function listarOpcionesCatalogoTecnologico()
 	{
 		$sql = "SELECT Id, Codigo, NombreGenerico FROM adquisiciones.CatalogoTecnologico WHERE Activo = 1";

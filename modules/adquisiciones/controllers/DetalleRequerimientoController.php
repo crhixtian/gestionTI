@@ -23,6 +23,7 @@ $centrosCostoDistribucion = [];
 $subCentrosCostoDistribucion = [];
 $idUsuarioSesion = isset($_SESSION['usuario_id']) ? (int) $_SESSION['usuario_id'] : null;
 
+// Normaliza el clasificador removiendo espacios, convirtiendo a mayúsculas y limitando a 12 caracteres
 function normalizarClasificadorDetalle($valor)
 {
 	$clasificador = trim((string) $valor);
@@ -42,6 +43,7 @@ function normalizarClasificadorDetalle($valor)
 }
 
 switch ($action) {
+	// Carga la vista de detalle del requerimiento con sus detalles y opciones de distribución
 	case 'requerimiento':
 		$vistaActual = 'detalle';
 		$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
@@ -57,6 +59,7 @@ switch ($action) {
 		}
 		break;
 
+	// Guarda un nuevo detalle de requerimiento vía AJAX validando datos completos
 	case 'guardarDetalleAjax':
 		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
 		
@@ -88,6 +91,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Actualiza un detalle existente vía AJAX validando que el ID y datos sean válidos
 	case 'actualizarDetalleAjax':
 		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
 		
@@ -118,6 +122,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Obtiene todas las distribuciones de un detalle vía AJAX
 	case 'obtenerDistribucionDetalleAjax':
 		ini_set('display_errors', '0');
 		ini_set('display_startup_errors', '0');
@@ -132,6 +137,7 @@ switch ($action) {
 		echo json_encode(['success' => true, 'distribuciones' => $distribuciones]);
 		exit;
 
+	// Guarda o actualiza una distribución del detalle vía AJAX validando duplicados
 	case 'guardarDistribucionDetalleAjax':
 		ini_set('display_errors', '0');
 		ini_set('display_startup_errors', '0');
@@ -171,6 +177,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Elimina una distribución del detalle vía AJAX
 	case 'eliminarDistribucionDetalleAjax':
 		ini_set('display_errors', '0');
 		ini_set('display_startup_errors', '0');
@@ -183,6 +190,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Guarda o actualiza un detalle mediante formulario HTML tradicional con redireccionamiento
 	case 'guardarDetalleForm':
 		$id = isset($_POST['Id']) ? (int) $_POST['Id'] : 0;
 		$datos = [
@@ -213,6 +221,7 @@ switch ($action) {
 
 		adqRedirigirSeguro('index.php?module=adquisiciones&action=requerimiento&id=' . (int) $datos['IdRequerimiento']);
 
+	// Elimina un detalle vía AJAX
 	case 'eliminarDetalleAjax':
 		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
@@ -224,6 +233,7 @@ switch ($action) {
 		}
 		exit;
 
+	// Actualiza el estado de un requerimiento vía AJAX
 	case 'actualizarEstadoAjax':
 		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
 		$id = isset($_POST['id']) ? (int) $_POST['id'] : 0;

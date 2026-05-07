@@ -5,11 +5,13 @@ class RequerimientoModel
 {
 	private $db;
 
+	// Inicializa el modelo con la conexion a la base de datos.
 	public function __construct($db)
 	{
 		$this->db = $db;
 	}
 
+	// Lista los requerimientos registrados, opcionalmente filtrados por anio.
 	public function listarRequerimientos($anio = null)
 	{
 		$sql = "
@@ -69,6 +71,7 @@ class RequerimientoModel
 		return $data;
 	}
 
+	// Obtiene los centros de costo activos ordenados por nombre.
 	public function obtenerCentrosCosto()
 	{
 		$sql = "SELECT Id, NombreCentroCosto, Siglas FROM adquisiciones.CentroCosto WHERE Activo = 1 ORDER BY NombreCentroCosto";
@@ -86,6 +89,7 @@ class RequerimientoModel
 		return $data;
 	}
 
+	// Obtiene los sub-centros de costo activos, opcionalmente filtrados por centro.
 	public function obtenerSubCentrosCostoActivos($idCentroCosto = null)
 	{
 		$sql = "
@@ -109,6 +113,7 @@ class RequerimientoModel
 		return $this->fetchAll($sql, $params);
 	}
 
+	// Lista todos los centros de costo para su gestion.
 	public function listarCentrosCostoGestion()
 	{
 		$sql = "
@@ -120,6 +125,7 @@ class RequerimientoModel
 		return $this->fetchAll($sql);
 	}
 
+	// Registra un nuevo centro de costo activo.
 	public function agregarCentroCosto($siglas, $nombreCentroCosto)
 	{
 		$siglasLimpio = strtoupper(trim((string) $siglas));
@@ -148,6 +154,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Centro de costo registrado correctamente.'];
 	}
 
+	// Actualiza las siglas y el nombre de un centro de costo activo.
 	public function actualizarCentroCosto($id, $siglas, $nombreCentroCosto)
 	{
 		$id = (int) $id;
@@ -178,6 +185,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Centro de costo actualizado correctamente.'];
 	}
 
+	// Inactiva un centro de costo por su identificador.
 	public function eliminarCentroCosto($id)
 	{
 		$id = (int) $id;
@@ -196,6 +204,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Centro de costo inactivado correctamente.'];
 	}
 
+	// Reactiva un centro de costo validando que no exista duplicado activo.
 	public function activarCentroCosto($id)
 	{
 		$id = (int) $id;
@@ -233,6 +242,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Centro de costo activado correctamente.'];
 	}
 
+	// Verifica si existe un centro de costo activo con las mismas siglas o nombre.
 	private function existeCentroCostoDuplicado($siglas, $nombreCentroCosto, $idExcluir = null)
 	{
 		$sql = "
@@ -259,6 +269,7 @@ class RequerimientoModel
 		return (bool) sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
 	}
 
+	// Obtiene los anios disponibles segun los requerimientos registrados.
 	public function obtenerAniosDisponibles()
 	{
 		$sql = "SELECT DISTINCT Anio FROM adquisiciones.Requerimiento ORDER BY Anio DESC";
@@ -276,6 +287,7 @@ class RequerimientoModel
 		return $data;
 	}
 
+	// Registra un nuevo requerimiento con su centro de costo y meta asociada.
 	public function guardarRequerimiento($datos)
 	{
 		$codigoMeta = adqNormalizarCodigoMeta($datos['CodigoMeta'] ?? null) ?? '000';
@@ -317,6 +329,7 @@ class RequerimientoModel
 		return $row ? $row['Id'] : false;
 	}
 
+	// Obtiene los datos completos de un requerimiento por su identificador.
 	public function obtenerRequerimientoPorId($id)
 	{
 		$sql = "
@@ -349,6 +362,7 @@ class RequerimientoModel
 		return $row ? $row : null;
 	}
 
+	// Actualiza los datos principales de un requerimiento existente.
 	public function actualizarRequerimiento($id, $datos)
 	{
 		$id = (int) $id;
@@ -395,6 +409,7 @@ class RequerimientoModel
 		return $stmt !== false;
 	}
 
+	// Actualiza el estado de un requerimiento y registra la modificacion.
 	public function actualizarEstado($id, $estado, $idUsuarioModifica = null)
 	{
 		$sql = "UPDATE adquisiciones.Requerimiento SET Estado = ?, idUsuarioModifica = ?, FechaModifica = GETDATE() WHERE Id = ?";
@@ -402,6 +417,7 @@ class RequerimientoModel
 		return $stmt !== false;
 	}
 
+	// Elimina un requerimiento junto con sus detalles asociados.
 	public function eliminarRequerimiento($id)
 	{
 		if ((int) $id <= 0) {
@@ -450,6 +466,7 @@ class RequerimientoModel
 		return sqlsrv_commit($this->db);
 	}
 
+	// Obtiene el consolidado de cantidades por equipo y centro de costo.
 	public function obtenerConsolidado($anio = null)
 	{
 		// Consulta que obtiene equipos agrupados por centro/sub-centro de costo.
@@ -642,6 +659,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Obtiene la cabecera completa de centros y sub-centros para el consolidado.
 	public function obtenerCabeceraConsolidadoCompleta()
 	{
 		$sqlCentros = "
@@ -738,6 +756,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Obtiene el consolidado en formato oficial agrupado por metas presupuestales.
 	public function obtenerConsolidadoFormatoOficial($anio, $metasCabecera = [])
 	{
 		$metasNormalizadas = $this->normalizarMetasCabeceraOficial($metasCabecera);
@@ -839,6 +858,7 @@ class RequerimientoModel
 		return $data;
 	}
 
+	// Obtiene el valor de una fila buscando posibles variantes de alias.
 	private function obtenerValorAliasFila(array $row, $alias, $valorDefault = null)
 	{
 		if (array_key_exists($alias, $row)) {
@@ -854,6 +874,7 @@ class RequerimientoModel
 		return $valorDefault;
 	}
 
+	// Normaliza las metas usadas como cabecera del consolidado oficial.
 	private function normalizarMetasCabeceraOficial($metasCabecera)
 	{
 		$salida = [];
@@ -892,6 +913,7 @@ class RequerimientoModel
 		return $salida;
 	}
 
+	// Genera el alias de columna usado para una meta en el consolidado oficial.
 	private function obtenerAliasMetaOficial($codigoMeta)
 	{
 		$codigo = preg_replace('/[^0-9]/', '', (string) $codigoMeta);
@@ -899,6 +921,7 @@ class RequerimientoModel
 		return 'Meta' . $codigo;
 	}
 
+	// Ejecuta una consulta y devuelve todas sus filas como arreglo.
 	private function fetchAll($sql, $params = [])
 	{
 		$stmt = sqlsrv_query($this->db, $sql, $params);
@@ -915,6 +938,7 @@ class RequerimientoModel
 		return $data;
 	}
 
+	// Ejecuta una consulta y devuelve la primera fila encontrada.
 	private function fetchOne($sql, $params = [])
 	{
 		$stmt = sqlsrv_query($this->db, $sql, $params);
@@ -928,6 +952,7 @@ class RequerimientoModel
 		return $row ? $row : [];
 	}
 
+	// Obtiene el resumen general de indicadores del dashboard para un anio.
 	public function obtenerDashboardResumenGeneral($anio)
 	{
 		$sql = "
@@ -955,6 +980,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Obtiene el total de items del dashboard agrupado por tipo de solicitud.
 	public function obtenerDashboardItemsPorTipo($anio)
 	{
 		$sql = "
@@ -983,6 +1009,7 @@ class RequerimientoModel
 		return $filas;
 	}
 
+	// Obtiene el resumen del dashboard agrupado por centro de costo.
 	public function obtenerDashboardCentroCosto($anio)
 	{
 		$sql = "
@@ -1009,6 +1036,7 @@ class RequerimientoModel
 		return $filas;
 	}
 
+	// Obtiene el estado documental de las tecnologias para el dashboard.
 	public function obtenerDashboardEstadoDocumental($anio)
 	{
 		$sql = "
@@ -1059,6 +1087,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Obtiene las ordenes de compra proximas a vencer para el dashboard.
 	public function obtenerDashboardOrdenesProximas($anio, $diasVentana = 30, $limite = 5)
 	{
 		$diasVentana = max(1, (int) $diasVentana);
@@ -1108,6 +1137,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Obtiene el resumen de metas SIAF activas e inactivas para el dashboard.
 	public function obtenerDashboardMetaSiafResumen()
 	{
 		$sql = "
@@ -1127,6 +1157,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Obtiene el resumen de tipos de solicitud activos e inactivos para el dashboard.
 	public function obtenerDashboardTipoSolicitudResumen()
 	{
 		$sql = "
@@ -1146,6 +1177,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Lista todas las metas SIAF para su gestion.
 	public function listarMetasSiafGestion()
 	{
 		$sql = "
@@ -1157,6 +1189,7 @@ class RequerimientoModel
 		return $this->fetchAll($sql);
 	}
 
+	// Obtiene las metas SIAF activas ordenadas por codigo.
 	public function obtenerMetasSiafActivas()
 	{
 		$sql = "
@@ -1169,6 +1202,7 @@ class RequerimientoModel
 		return $this->fetchAll($sql);
 	}
 
+	// Obtiene las metas SIAF que forman la cabecera del consolidado por anio.
 	public function obtenerMetasCabeceraConsolidado($anio)
 	{
 		$metas = $this->obtenerMetasSiafActivas();
@@ -1216,6 +1250,7 @@ class RequerimientoModel
 		return $resultado;
 	}
 
+	// Registra una nueva meta SIAF activa.
 	public function agregarMetaSiaf($codigoMeta, $descripcion, $idUsuarioRegistro = null)
 	{
 		$codigoMetaLimpio = $this->normalizarCodigoMetaSiaf($codigoMeta);
@@ -1257,6 +1292,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Meta SIAF registrada correctamente.'];
 	}
 
+	// Actualiza el codigo y la descripcion de una meta SIAF activa.
 	public function actualizarMetaSiaf($id, $codigoMeta, $descripcion, $idUsuarioModifica = null)
 	{
 		$id = (int) $id;
@@ -1303,6 +1339,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Meta SIAF actualizada correctamente.'];
 	}
 
+	// Inactiva una meta SIAF por su identificador.
 	public function eliminarMetaSiaf($id, $idUsuarioModifica = null)
 	{
 		$id = (int) $id;
@@ -1328,6 +1365,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Meta SIAF inactivada correctamente.'];
 	}
 
+	// Reactiva una meta SIAF por su identificador.
 	public function activarMetaSiaf($id, $idUsuarioModifica = null)
 	{
 		$id = (int) $id;
@@ -1353,6 +1391,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Meta SIAF activada correctamente.'];
 	}
 
+	// Busca pedidos SIGA importables para el anio indicado.
 	public function buscarPedidosSiga(int $anio): array
 	{
 		$sql = "
@@ -1412,6 +1451,7 @@ class RequerimientoModel
 		return $data;
 	}
 
+	// Importa un pedido SIGA y registra sus items como requerimiento.
 	public function importarPedidoSiga(string $nroPedido, int $anio, ?int $idUsuarioRegistro = null): array
 	{
 		// 1. Traer ítems del pedido desde SIGA
@@ -1593,6 +1633,7 @@ class RequerimientoModel
 		return ['items' => $totalItems];
 	}
 
+	// Normaliza un codigo de meta SIAF y valida su longitud.
 	private function normalizarCodigoMetaSiaf($codigoMeta)
 	{
 		$valor = trim((string) $codigoMeta);
@@ -1609,6 +1650,7 @@ class RequerimientoModel
 		return $valor;
 	}
 
+	// Obtiene el identificador de una meta SIAF activa por codigo.
 	private function obtenerIdMetaSiafPorCodigo($codigoMeta = '000')
 	{
 		$codigo = trim((string) $codigoMeta);
@@ -1632,6 +1674,7 @@ class RequerimientoModel
 		return $row ? (int) $row['Id'] : null;
 	}
 
+	// Verifica si existe una meta SIAF activa por identificador.
 	private function existeMetaSiafActivaPorId($idMetaSiaf)
 	{
 		$idMetaSiaf = (int) $idMetaSiaf;
@@ -1656,6 +1699,7 @@ class RequerimientoModel
 
 	// ─── SubCentroCosto ───────────────────────────────────────────────────────
 
+	// Obtiene el resumen de sub-centros de costo para el dashboard.
 	public function obtenerDashboardSubCentrosCostoResumen()
 	{
 		$sql = "
@@ -1675,6 +1719,7 @@ class RequerimientoModel
 		];
 	}
 
+	// Lista todos los sub-centros de costo para su gestion.
 	public function listarSubCentrosCostoGestion()
 	{
 		$sql = "
@@ -1693,6 +1738,7 @@ class RequerimientoModel
 		return $this->fetchAll($sql);
 	}
 
+	// Registra un nuevo sub-centro de costo activo.
 	public function agregarSubCentroCosto($idCentroCosto, $siglas, $nombreSubCentroCosto, $idUsuario = null)
 	{
 		$idCentroCosto = (int) $idCentroCosto;
@@ -1725,6 +1771,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Sub-centro de costo registrado correctamente.'];
 	}
 
+	// Actualiza los datos de un sub-centro de costo activo.
 	public function actualizarSubCentroCosto($id, $idCentroCosto, $siglas, $nombreSubCentroCosto, $idUsuario = null)
 	{
 		$id            = (int) $id;
@@ -1759,6 +1806,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Sub-centro de costo actualizado correctamente.'];
 	}
 
+	// Inactiva un sub-centro de costo por su identificador.
 	public function eliminarSubCentroCosto($id)
 	{
 		$id = (int) $id;
@@ -1778,6 +1826,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Sub-centro de costo eliminado correctamente.'];
 	}
 
+	// Reactiva un sub-centro de costo validando que no exista duplicado activo.
 	public function activarSubCentroCosto($id)
 	{
 		$id = (int) $id;
@@ -1819,6 +1868,7 @@ class RequerimientoModel
 		return ['success' => true, 'message' => 'Sub-centro de costo activado correctamente.'];
 	}
 
+	// Verifica si existe un sub-centro activo duplicado en el centro indicado.
 	private function existeSubCentroCostoDuplicado($idCentroCosto, $siglas, $nombreSubCentroCosto, $idExcluir = null)
 	{
 		$sql = "
