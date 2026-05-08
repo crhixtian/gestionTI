@@ -11,6 +11,11 @@ $cabeceraCentros = $consolidado['cabeceraCentros'] ?? [];
 $cabeceraCentrosExportacion = $consolidadoCabeceraExportacion['cabeceraCentros'] ?? [];
 $matriz = $consolidado['matriz'];
 $tiposSolicitudPorEquipo = $consolidado['tiposSolicitudPorEquipo'] ?? [];
+$diagnosticoConsolidado = $consolidado['diagnostico'] ?? [];
+$mensajeSinDatos = trim((string) ($diagnosticoConsolidado['mensaje'] ?? ''));
+if ($mensajeSinDatos === '') {
+	$mensajeSinDatos = 'No hay requerimientos registrados para el año seleccionado.';
+}
 
 // Usar la cabecera web como respaldo cuando no hay cabecera de exportacion.
 if (empty($cabeceraCentrosExportacion)) {
@@ -112,9 +117,9 @@ $totalGeneral = array_sum($totalesPorCentroCosto);
 		<button class="btn btn-success" onclick="exportarConsolidado()">
 			Consolidado
 		</button>
-		<button class="btn btn-success" onclick="exportarConsolidadoOficial()">
+		<!-- button class="btn btn-success" onclick="exportarConsolidadoOficial()">
 			Consolidado Oficial
-		</button>
+		</button -->
 	</div>
 </div>
 
@@ -122,7 +127,7 @@ $totalGeneral = array_sum($totalesPorCentroCosto);
 	<div class="alert alert-info mb-0">
 		<div>
 			<h4 class="alert-title">Sin datos</h4>
-			<div class="text-secondary">No hay requerimientos registrados para el año seleccionado.</div>
+			<div class="text-secondary"><?php echo htmlspecialchars($mensajeSinDatos); ?></div>
 		</div>
 	</div>
 <?php else: ?>

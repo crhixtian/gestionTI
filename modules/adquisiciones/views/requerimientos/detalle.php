@@ -233,25 +233,38 @@
 							<input type="number" name="Cantidad" id="distribucion-Cantidad" class="form-control" min="1" required>
 						</div>
 					</div>
-					<div class="row mt-3">
-						<div class="col-12 col-md-4">
-							<div class="mb-1"><strong>Total solicitado:</strong> <span id="distribucion-total-solicitado">0</span></div>
-							<div class="mb-1"><strong>Total distribuido:</strong> <span id="distribucion-total-distribuido">0</span></div>
-							<div class="mb-1"><strong>Saldo restante:</strong> <span id="distribucion-total-saldo">0</span></div>
+					<div class="mt-3">
+						<div class="table-responsive">
+							<table class="table table-sm table-striped table-vcenter mb-0">
+								<thead>
+									<tr>
+										<th>Centro</th>
+										<th>Subcentro</th>
+										<th>Cantidad</th>
+										<th class="text-end">Acciones</th>
+									</tr>
+								</thead>
+								<tbody id="tabla-distribucion-detalle"></tbody>
+							</table>
 						</div>
-						<div class="col-12 col-md-8">
-							<div class="table-responsive">
-								<table class="table table-sm table-striped">
-									<thead>
-										<tr>
-											<th>Centro</th>
-											<th>Subcentro</th>
-											<th>Cantidad</th>
-											<th class="text-end">Acciones</th>
-										</tr>
-									</thead>
-									<tbody id="tabla-distribucion-detalle"></tbody>
-								</table>
+						<div class="row g-2 mt-3 pt-3 border-top">
+							<div class="col-12 col-sm-4">
+								<div class="border rounded p-2 d-flex align-items-center justify-content-between gap-2">
+									<span class="text-secondary fw-semibold">Total solicitado</span>
+									<strong class="fs-3" id="distribucion-total-solicitado">0</strong>
+								</div>
+							</div>
+							<div class="col-12 col-sm-4">
+								<div class="border rounded p-2 d-flex align-items-center justify-content-between gap-2">
+									<span class="text-secondary fw-semibold">Total distribuido</span>
+									<strong class="fs-3" id="distribucion-total-distribuido">0</strong>
+								</div>
+							</div>
+							<div class="col-12 col-sm-4">
+								<div class="border rounded p-2 d-flex align-items-center justify-content-between gap-2">
+									<span class="text-secondary fw-semibold">Saldo restante</span>
+									<strong class="fs-3" id="distribucion-total-saldo">0</strong>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -452,12 +465,11 @@
 				'<td>',
 					'<div class="d-flex gap-2">',
 						'<span>' + escapeHtml(valores.codigoTecnologia || '') + '</span>',
-						'<button type="button" class="btn btn-sm btn-outline-secondary" onclick="abrirDistribucionDetalle(' + id + ')">Distribuir</button>',
 					'</div>',
 				'</td>',
 				'<td class="text-end align-middle">',
 				'<div class="btn-group" role="group">',
-					'<button type="button" class="btn btn-icon btn-lg" title="Detalles" onclick="verDetalles(' + id + ')">',
+					'<button type="button" class="btn btn-icon btn-lg" title="Detalles" onclick="abrirDistribucionDetalle(' + id + ')">',
 						'<i class="ti ti-adjustments fs-2"></i>',
 					'</button>',
 					'<button type="button" class="btn btn-icon btn-lg" title="Editar" onclick="editarDetalle(' + id + ')">',
@@ -531,7 +543,11 @@
 					'<td>' + escapeHtml(distribucion.SiglasCentroCosto ? distribucion.SiglasCentroCosto + ' - ' + distribucion.NombreCentroCosto : distribucion.NombreCentroCosto) + '</td>' +
 					'<td>' + escapeHtml(distribucion.SiglasSubCentroCosto ? distribucion.SiglasSubCentroCosto + ' - ' + distribucion.NombreSubCentroCosto : (distribucion.NombreSubCentroCosto || 'Sin subcentro')) + '</td>' +
 					'<td>' + parseInt(distribucion.Cantidad, 10) + '</td>' +
-					'<td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarDistribucionDetalle(' + parseInt(distribucion.Id, 10) + ')">Eliminar</button></td>' +
+					'<td class="text-end">' +
+						'<button type="button" class="btn btn-icon btn-lg text-danger" title="Eliminar" onclick="eliminarDistribucionDetalle(' + parseInt(distribucion.Id, 10) + ')">' +
+							'<i class="ti ti-trash fs-2"></i>' +
+						'</button>' +
+					'</td>' +
 				'</tr>'
 			);
 		});

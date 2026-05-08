@@ -18,20 +18,16 @@ class RequerimientoModel
 			SELECT
 				r.Id,
 				r.IdCentroCosto,
-				r.IdSubCentroCosto,
 				r.IdMetaSIAF,
 				r.NroPedidoCompra,
 				r.CodigoMeta,
 				c.NombreCentroCosto,
 				c.Siglas,
-				sc.NombreSubCentroCosto,
-				sc.Siglas AS SiglasSubCentroCosto,
 				r.Anio,
 				r.Estado,
 				COUNT(d.Id) AS TotalItems
 			FROM adquisiciones.Requerimiento r
 			INNER JOIN adquisiciones.CentroCosto c ON c.Id = r.IdCentroCosto
-			LEFT JOIN adquisiciones.SubCentroCosto sc ON sc.Id = r.IdSubCentroCosto
 			LEFT JOIN adquisiciones.DetalleRequerimiento d ON d.IdRequerimiento = r.Id
 		";
 
@@ -45,14 +41,11 @@ class RequerimientoModel
 			GROUP BY
 				r.Id,
 				r.IdCentroCosto,
-				r.IdSubCentroCosto,
 				r.IdMetaSIAF,
 				r.NroPedidoCompra,
 				r.CodigoMeta,
 				c.NombreCentroCosto,
 				c.Siglas,
-				sc.NombreSubCentroCosto,
-				sc.Siglas,
 				r.Anio,
 				r.Estado
 			ORDER BY r.Anio DESC, r.NroPedidoCompra DESC
@@ -291,9 +284,6 @@ class RequerimientoModel
 	public function guardarRequerimiento($datos)
 	{
 		$codigoMeta = adqNormalizarCodigoMeta($datos['CodigoMeta'] ?? null) ?? '000';
-		$idSubCentroCosto = isset($datos['IdSubCentroCosto']) && (int) $datos['IdSubCentroCosto'] > 0
-			? (int) $datos['IdSubCentroCosto']
-			: null;
 		$idMetaSiaf = isset($datos['IdMetaSIAF']) ? (int) $datos['IdMetaSIAF'] : 0;
 		$idMetaSiaf = $idMetaSiaf > 0 ? $idMetaSiaf : null;
 
@@ -303,14 +293,13 @@ class RequerimientoModel
 
 		$sql = "
 			INSERT INTO adquisiciones.Requerimiento
-				(IdCentroCosto, IdSubCentroCosto, IdMetaSIAF, NroPedidoCompra, CodigoMeta, Anio, FechaRegistro, Estado, idUsuarioRegistro)
+				(IdCentroCosto, IdMetaSIAF, NroPedidoCompra, CodigoMeta, Anio, FechaRegistro, Estado, idUsuarioRegistro)
 			OUTPUT INSERTED.Id
-			VALUES (?, ?, ?, ?, ?, ?, GETDATE(), 0, ?)
+			VALUES (?, ?, ?, ?, ?, GETDATE(), 0, ?)
 		";
 
 		$params = [
 			$datos['IdCentroCosto'],
-			$idSubCentroCosto,
 			$idMetaSiaf,
 			$datos['NroPedidoCompra'],
 			$codigoMeta,
@@ -337,19 +326,15 @@ class RequerimientoModel
 				r.Id,
 				r.NroPedidoCompra,
 				r.IdCentroCosto,
-				r.IdSubCentroCosto,
 				r.IdMetaSIAF,
 				r.CodigoMeta,
 				c.NombreCentroCosto,
 				c.Siglas,
-				sc.NombreSubCentroCosto,
-				sc.Siglas AS SiglasSubCentroCosto,
 				r.Anio,
 				r.Estado,
 				r.FechaRegistro
 			FROM adquisiciones.Requerimiento r
 			INNER JOIN adquisiciones.CentroCosto c ON c.Id = r.IdCentroCosto
-			LEFT JOIN adquisiciones.SubCentroCosto sc ON sc.Id = r.IdSubCentroCosto
 			WHERE r.Id = ?
 		";
 
@@ -371,9 +356,6 @@ class RequerimientoModel
 		}
 
 		$codigoMeta = adqNormalizarCodigoMeta($datos['CodigoMeta'] ?? null) ?? '000';
-		$idSubCentroCosto = isset($datos['IdSubCentroCosto']) && (int) $datos['IdSubCentroCosto'] > 0
-			? (int) $datos['IdSubCentroCosto']
-			: null;
 		$idMetaSiaf = isset($datos['IdMetaSIAF']) ? (int) $datos['IdMetaSIAF'] : 0;
 		$idMetaSiaf = $idMetaSiaf > 0 ? $idMetaSiaf : null;
 
@@ -384,7 +366,6 @@ class RequerimientoModel
 		$sql = "
 			UPDATE adquisiciones.Requerimiento
 			SET IdCentroCosto = ?,
-				IdSubCentroCosto = ?,
 				IdMetaSIAF = ?,
 				NroPedidoCompra = ?,
 				CodigoMeta = ?,
@@ -396,7 +377,6 @@ class RequerimientoModel
 
 		$params = [
 			$datos['IdCentroCosto'],
-			$idSubCentroCosto,
 			$idMetaSiaf,
 			$datos['NroPedidoCompra'],
 			$codigoMeta,
@@ -479,26 +459,18 @@ class RequerimientoModel
 						ELSE LTRIM(RTRIM(ISNULL(ct.NombreGenerico, 'SIN CLASIFICAR')))
 					END
 				) AS Equipo,
-				MAX(UPPER(LTRIM(RTRIM(ISNULL(tsa.NombreTipoSolicitud, ''))))) AS TipoSolicitud,
+				'' AS TipoSolicitud,
 				c.Id AS IdCentroCosto,
 				c.Siglas AS CentroCosto,
-				CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdSubCentroCosto ELSE r.IdSubCentroCosto END AS IdSubCentroCosto,
+				dist.IdSubCentroCosto AS IdSubCentroCosto,
 				sc.Siglas AS SubCentroCosto,
-				SUM(COALESCE(dist.Cantidad, d.Cantidad)) AS Cantidad
-			FROM adquisiciones.DetalleRequerimiento d
+				SUM(dist.Cantidad) AS Cantidad
+			FROM adquisiciones.DistribucionDetalle dist
+			INNER JOIN adquisiciones.DetalleRequerimiento d ON d.Id = dist.IdDetalleRequerimiento
 			INNER JOIN adquisiciones.Requerimiento r ON r.Id = d.IdRequerimiento
-			LEFT JOIN adquisiciones.DistribucionDetalle dist ON dist.IdDetalleRequerimiento = d.Id
-			LEFT JOIN adquisiciones.CentroCosto c ON c.Id = CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdCentroCosto ELSE r.IdCentroCosto END
-			LEFT JOIN adquisiciones.SubCentroCosto sc ON sc.Id = CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdSubCentroCosto ELSE r.IdSubCentroCosto END
+			INNER JOIN adquisiciones.CentroCosto c ON c.Id = dist.IdCentroCosto
+			LEFT JOIN adquisiciones.SubCentroCosto sc ON sc.Id = dist.IdSubCentroCosto
 			LEFT JOIN adquisiciones.CatalogoTecnologico ct ON ct.Id = d.IdCatalogoTecnologico AND ct.Activo = 1
-			OUTER APPLY (
-				SELECT TOP 1 ts.Nombre AS NombreTipoSolicitud
-				FROM adquisiciones.CatalogoTecnologicoTipoSolicitud ctts
-				INNER JOIN adquisiciones.TipoSolicitud ts ON ts.Id = ctts.IdTipoSolicitud
-				WHERE ctts.IdCatalogoTecnologico = d.IdCatalogoTecnologico
-					AND ctts.Anio = r.Anio
-				ORDER BY ctts.Activo DESC, ctts.Id DESC
-			) tsa
 		";
 
 		$params = [];
@@ -508,7 +480,7 @@ class RequerimientoModel
 		}
 
 			$sql .= "
-				GROUP BY ct.Codigo, ct.NombreGenerico, c.Id, c.Siglas, CASE WHEN dist.IdDetalleRequerimiento IS NOT NULL THEN dist.IdSubCentroCosto ELSE r.IdSubCentroCosto END, sc.Siglas
+				GROUP BY ct.Codigo, ct.NombreGenerico, c.Id, c.Siglas, dist.IdSubCentroCosto, sc.Siglas
 				ORDER BY
 					CASE
 						WHEN PATINDEX('%[0-9]%', ct.Codigo) > 0 THEN LEFT(ct.Codigo, PATINDEX('%[0-9]%', ct.Codigo) - 1)
@@ -528,7 +500,19 @@ class RequerimientoModel
 
 		$stmt = sqlsrv_query($this->db, $sql, $params);
 		if ($stmt === false) {
-			return ['equipos' => [], 'centrosCosto' => [], 'cabeceraCentros' => [], 'matriz' => [], 'tiposSolicitudPorEquipo' => []];
+			$errores = sqlsrv_errors();
+			error_log('Error al obtener consolidado de adquisiciones: ' . print_r($errores, true));
+			return [
+				'equipos' => [],
+				'centrosCosto' => [],
+				'cabeceraCentros' => [],
+				'matriz' => [],
+				'tiposSolicitudPorEquipo' => [],
+				'diagnostico' => [
+					'estado' => 'error',
+					'mensaje' => 'No se pudo consultar el consolidado. Revise el log de PHP/SQL Server para ver el detalle.',
+				],
+			];
 		}
 
 		$matriz = [];
@@ -559,6 +543,11 @@ class RequerimientoModel
 				$tiposSolicitudPorEquipo[$equipo] = $tipoSolicitud;
 			}
 			$equiposSet[$equipo] = true;
+		}
+
+		$diagnostico = ['estado' => 'ok'];
+		if (empty($equiposSet)) {
+			$diagnostico = $this->obtenerDiagnosticoConsolidado($anio);
 		}
 
 		$centrosOrdenados = array_values($centrosUsados);
@@ -656,6 +645,66 @@ class RequerimientoModel
 			'cabeceraCentros' => $cabeceraCentros,
 			'matriz' => $matriz,
 			'tiposSolicitudPorEquipo' => $tiposSolicitudPorEquipo,
+			'diagnostico' => $diagnostico,
+		];
+	}
+
+	private function obtenerDiagnosticoConsolidado($anio = null)
+	{
+		$sql = "
+			SELECT
+				COUNT(DISTINCT r.Id) AS TotalRequerimientos,
+				COUNT(DISTINCT d.Id) AS TotalDetalles,
+				COUNT(dist.Id) AS TotalDistribuciones
+			FROM adquisiciones.Requerimiento r
+			LEFT JOIN adquisiciones.DetalleRequerimiento d ON d.IdRequerimiento = r.Id
+			LEFT JOIN adquisiciones.DistribucionDetalle dist ON dist.IdDetalleRequerimiento = d.Id
+		";
+
+		$params = [];
+		if ($anio !== null) {
+			$sql .= " WHERE r.Anio = ?";
+			$params[] = (int) $anio;
+		}
+
+		$stmt = sqlsrv_query($this->db, $sql, $params);
+		if ($stmt === false) {
+			error_log('Error al diagnosticar consolidado de adquisiciones: ' . print_r(sqlsrv_errors(), true));
+			return [
+				'estado' => 'error',
+				'mensaje' => 'No se pudo diagnosticar el consolidado. Revise el log de PHP/SQL Server.',
+			];
+		}
+
+		$row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+		$totalRequerimientos = (int) ($row['TotalRequerimientos'] ?? 0);
+		$totalDetalles = (int) ($row['TotalDetalles'] ?? 0);
+		$totalDistribuciones = (int) ($row['TotalDistribuciones'] ?? 0);
+
+		if ($totalRequerimientos <= 0) {
+			return [
+				'estado' => 'sin_requerimientos',
+				'mensaje' => 'No hay requerimientos registrados para el año seleccionado.',
+			];
+		}
+
+		if ($totalDetalles <= 0) {
+			return [
+				'estado' => 'sin_detalles',
+				'mensaje' => 'Hay requerimientos para el año seleccionado, pero no tienen items registrados.',
+			];
+		}
+
+		if ($totalDistribuciones <= 0) {
+			return [
+				'estado' => 'sin_distribuciones',
+				'mensaje' => 'Hay items registrados para el año seleccionado, pero todavía no tienen distribución por centro de costo.',
+			];
+		}
+
+		return [
+			'estado' => 'sin_filas',
+			'mensaje' => 'Hay distribuciones registradas, pero no se pudo armar la matriz del consolidado.',
 		];
 	}
 
@@ -774,7 +823,7 @@ class RequerimientoModel
 							(? > 0 AND r.IdMetaSIAF = ?)
 							OR RIGHT('0000' + LTRIM(RTRIM(ISNULL(ms.CodigoMeta, ISNULL(r.CodigoMeta, '')))), 4) = RIGHT('0000' + ?, 4)
 						)
-						THEN d.Cantidad
+						THEN dist.Cantidad
 						ELSE 0
 					END
 				) AS [{$aliasMeta}]
@@ -798,8 +847,9 @@ class RequerimientoModel
 				UPPER(LTRIM(RTRIM(ISNULL(MAX(d.UnidadMedida), '')))) AS UnidadMedida,
 				MAX(pt.Monto) AS PrecioUnitario,
 				{$sqlSelectMetas}
-				SUM(d.Cantidad) AS TotalInicial
-			FROM adquisiciones.DetalleRequerimiento d
+				SUM(dist.Cantidad) AS TotalInicial
+			FROM adquisiciones.DistribucionDetalle dist
+			INNER JOIN adquisiciones.DetalleRequerimiento d ON d.Id = dist.IdDetalleRequerimiento
 			INNER JOIN adquisiciones.Requerimiento r ON r.Id = d.IdRequerimiento
 				LEFT JOIN adquisiciones.MetaSIAF ms ON ms.Id = r.IdMetaSIAF
 			LEFT JOIN adquisiciones.CatalogoTecnologico ct ON ct.Id = d.IdCatalogoTecnologico AND ct.Activo = 1
@@ -831,6 +881,7 @@ class RequerimientoModel
 		$params[] = (int) $anio;
 		$stmt = sqlsrv_query($this->db, $sql, $params);
 		if ($stmt === false) {
+			error_log('Error al obtener consolidado oficial de adquisiciones: ' . print_r(sqlsrv_errors(), true));
 			return [];
 		}
 
@@ -1554,10 +1605,10 @@ class RequerimientoModel
 		if (!$idReq) {
 			$stmtIns = sqlsrv_query($this->db, "
 				INSERT INTO adquisiciones.Requerimiento
-					(IdCentroCosto, IdSubCentroCosto, IdMetaSIAF, NroPedidoCompra, CodigoMeta, Anio, FechaRegistro, Estado, idUsuarioRegistro)
+					(IdCentroCosto, IdMetaSIAF, NroPedidoCompra, CodigoMeta, Anio, FechaRegistro, Estado, idUsuarioRegistro)
 				OUTPUT INSERTED.Id
-				VALUES (?, ?, ?, ?, ?, ?, GETDATE(), 0, ?)
-			", [$idCentro, null, $idMetaSiaf, $nroPedido, $codigoMeta, $anio, $idUsuarioRegistro]);
+				VALUES (?, ?, ?, ?, ?, GETDATE(), 0, ?)
+			", [$idCentro, $idMetaSiaf, $nroPedido, $codigoMeta, $anio, $idUsuarioRegistro]);
 
 			if ($stmtIns === false) {
 				$errors = sqlsrv_errors(SQLSRV_ERR_ERRORS);

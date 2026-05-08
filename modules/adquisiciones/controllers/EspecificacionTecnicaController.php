@@ -327,6 +327,8 @@ function validarPedidosTecnologiaPorAnio($catalogoModel, $idCatalogoTecnologico,
 	}
 }
 
+$idUsuarioSesion = obtenerIdUsuarioSesion();
+
 switch ($action) {
 	// Carga la vista de detalle de una tecnología con todos sus documentos relacionados
 	case 'tecnologia':

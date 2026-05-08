@@ -1,7 +1,6 @@
 <!-- Encabezado con filtro de año y botones de acción (importar y agregar requerimiento) -->
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 	<?php $metasSiafActivasLista = (isset($metasSiafActivas) && is_array($metasSiafActivas)) ? $metasSiafActivas : []; ?>
-	<?php $subCentrosCostoLista = (isset($subCentrosCosto) && is_array($subCentrosCosto)) ? $subCentrosCosto : []; ?>
 	<div class="d-flex gap-2 align-items-center flex-wrap">
 		<label class="form-label mb-0 text-nowrap">Filtrar por año:</label>
 		<select id="filtroAnio" class="form-select w-auto" onchange="filtrarPorAnio()" <?php echo empty($aniosDisponibles) ? 'disabled' : ''; ?>>
@@ -45,7 +44,6 @@
 					<tr
 						data-id="<?php echo (int) $req['Id']; ?>"
 						data-id-centro-costo="<?php echo (int) $req['IdCentroCosto']; ?>"
-						data-id-sub-centro-costo="<?php echo (int) ($req['IdSubCentroCosto'] ?? 0); ?>"
 						data-id-meta-siaf="<?php echo isset($req['IdMetaSIAF']) && (int) $req['IdMetaSIAF'] > 0 ? (int) $req['IdMetaSIAF'] : ''; ?>"
 						data-nro-pedido="<?php echo htmlspecialchars((string) $req['NroPedidoCompra'], ENT_QUOTES, 'UTF-8'); ?>"
 						data-codigo-meta="<?php echo htmlspecialchars((string) ($req['CodigoMeta'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
@@ -53,22 +51,11 @@
 						<td><?php echo htmlspecialchars($req['NroPedidoCompra']); ?></td>
 						<td><?php echo htmlspecialchars((string) ($req['CodigoMeta'] ?? '')); ?></td>
 						<td>
-							<div>
-								<?php
-								$textoCentroCosto = trim((string) ($req['Siglas'] ?? ''));
-								$nombreCentroCosto = trim((string) ($req['NombreCentroCosto'] ?? ''));
-								echo htmlspecialchars($textoCentroCosto !== '' ? ($textoCentroCosto . ' - ' . $nombreCentroCosto) : $nombreCentroCosto);
-								?>
-							</div>
-							<?php if (!empty($req['NombreSubCentroCosto'])): ?>
-								<div class="text-secondary small">
-									<?php
-									$textoSubCentroCosto = trim((string) ($req['SiglasSubCentroCosto'] ?? ''));
-									$nombreSubCentroCosto = trim((string) ($req['NombreSubCentroCosto'] ?? ''));
-									echo htmlspecialchars($textoSubCentroCosto !== '' ? ($textoSubCentroCosto . ' - ' . $nombreSubCentroCosto) : $nombreSubCentroCosto);
-									?>
-								</div>
-							<?php endif; ?>
+							<?php
+							$textoCentroCosto = trim((string) ($req['Siglas'] ?? ''));
+							$nombreCentroCosto = trim((string) ($req['NombreCentroCosto'] ?? ''));
+							echo htmlspecialchars($textoCentroCosto !== '' ? ($textoCentroCosto . ' - ' . $nombreCentroCosto) : $nombreCentroCosto);
+							?>
 						</td>
 						<td><?php echo (int) $req['Anio']; ?></td>
 						<td>
@@ -134,12 +121,6 @@
 									<?php echo htmlspecialchars($cc['Siglas'] . ' - ' . $cc['NombreCentroCosto']); ?>
 								</option>
 							<?php endforeach; ?>
-						</select>
-					</div>
-					<div class="mb-3">
-						<label class="form-label">Sub-Centro de Costo</label>
-						<select name="IdSubCentroCosto" id="IdSubCentroCosto" class="form-select">
-							<option value="">Seleccione un centro de costo primero...</option>
 						</select>
 					</div>
 					<div class="mb-3">
@@ -234,8 +215,6 @@
 </div>
 
 <script>
-	window.adqSubCentrosCostoData = <?php echo json_encode($subCentrosCostoLista, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
-
 	// Codifica caracteres especiales de HTML para prevenir inyecciones XSS
 	function escapeHtml(texto) {
 		return String(texto)
@@ -257,26 +236,17 @@
 		}
 	}
 
-	// Formatea el nombre del centro con su subcentro en HTML
-	function construirNombreCentroCosto(centroCosto, subCentroCosto) {
-		if (subCentroCosto) {
-			return '<div>' + escapeHtml(centroCosto) + '</div><div class="text-secondary small">' + escapeHtml(subCentroCosto) + '</div>';
-		}
-
-		return escapeHtml(centroCosto);
-	}
-
 	// Genera el HTML de una fila de tabla con todos los datos del requerimiento
-	function construirFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado) {
+	function construirFilaRequerimiento(id, idCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, anio, estado) {
 		const badgeEstado = parseInt(estado, 10) === 1 ?
 			'<span class="badge bg-success-lt">Completo</span>' :
 			'<span class="badge bg-warning-lt text-dark">Pendiente</span>';
 
 		return [
-			'<tr data-id="' + id + '" data-id-centro-costo="' + (idCentroCosto || '') + '" data-id-sub-centro-costo="' + (idSubCentroCosto || '') + '" data-id-meta-siaf="' + (idMetaSiaf || '') + '" data-nro-pedido="' + escapeHtml(nroPedido) + '" data-codigo-meta="' + escapeHtml(codigoMeta || '') + '" data-anio="' + parseInt(anio, 10) + '">',
+			'<tr data-id="' + id + '" data-id-centro-costo="' + (idCentroCosto || '') + '" data-id-meta-siaf="' + (idMetaSiaf || '') + '" data-nro-pedido="' + escapeHtml(nroPedido) + '" data-codigo-meta="' + escapeHtml(codigoMeta || '') + '" data-anio="' + parseInt(anio, 10) + '">',
 				'<td>' + escapeHtml(nroPedido) + '</td>',
 				'<td>' + escapeHtml(codigoMeta || '') + '</td>',
-				'<td>' + construirNombreCentroCosto(centroCosto, subCentroCosto) + '</td>',
+				'<td>' + escapeHtml(centroCosto) + '</td>',
 				'<td>' + parseInt(anio, 10) + '</td>',
 				'<td>' + badgeEstado + '</td>',
 				'<td class="text-end align-middle">',
@@ -300,7 +270,7 @@
 	}
 
 	// Agrega una nueva fila a la tabla de requerimientos
-	function agregarFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado) {
+	function agregarFilaRequerimiento(id, idCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, anio, estado) {
 		const tbody = document.getElementById('tabla-requerimientos-body');
 		if (!tbody) return;
 
@@ -309,16 +279,16 @@
 			tbody.innerHTML = '';
 		}
 
-		tbody.insertAdjacentHTML('beforeend', construirFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado));
+		tbody.insertAdjacentHTML('beforeend', construirFilaRequerimiento(id, idCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, anio, estado));
 	}
 
 	// Actualiza una fila existente o la agrega si no existe
-	function actualizarFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado) {
+	function actualizarFilaRequerimiento(id, idCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, anio, estado) {
 		const tbody = document.getElementById('tabla-requerimientos-body');
 		if (!tbody) return;
 
 		const fila = tbody.querySelector('tr[data-id="' + id + '"]');
-		const htmlFila = construirFilaRequerimiento(id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, subCentroCosto, anio, estado);
+		const htmlFila = construirFilaRequerimiento(id, idCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCosto, anio, estado);
 
 		if (fila) {
 			fila.outerHTML = htmlFila;
@@ -326,42 +296,6 @@
 		}
 
 		tbody.insertAdjacentHTML('beforeend', htmlFila);
-	}
-
-	// Obtiene los subcentros de costo que pertenecen a un centro específico
-	function obtenerSubCentrosPorCentro(idCentroCosto) {
-		const idCentro = parseInt(idCentroCosto, 10) || 0;
-		const subCentrosCostoData = Array.isArray(window.adqSubCentrosCostoData) ? window.adqSubCentrosCostoData : [];
-		return subCentrosCostoData.filter(function(item) {
-			return parseInt(item.IdCentroCosto, 10) === idCentro;
-		});
-	}
-
-	// Carga las opciones de subcentros en el select basado en el centro seleccionado
-	function poblarSubCentrosCosto(idCentroCosto, idSeleccionado) {
-		const selectSubCentro = document.getElementById('IdSubCentroCosto');
-		if (!selectSubCentro) return;
-
-		const subCentros = obtenerSubCentrosPorCentro(idCentroCosto);
-		selectSubCentro.innerHTML = '';
-
-		if (!idCentroCosto) {
-			selectSubCentro.innerHTML = '<option value="">Seleccione un centro de costo primero...</option>';
-			selectSubCentro.value = '';
-			return;
-		}
-
-		selectSubCentro.insertAdjacentHTML('beforeend', '<option value="">Seleccione...</option>');
-
-		subCentros.forEach(function(item) {
-			const option = document.createElement('option');
-			option.value = item.Id;
-			option.textContent = [item.Siglas, item.NombreSubCentroCosto].filter(Boolean).join(' - ');
-			if (String(item.Id) === String(idSeleccionado || '')) {
-				option.selected = true;
-			}
-			selectSubCentro.appendChild(option);
-		});
 	}
 
 	// Inicializa el formulario modal para crear un nuevo requerimiento
@@ -394,8 +328,6 @@
 		if (idCentroCostoEl) {
 			idCentroCostoEl.value = '';
 		}
-		poblarSubCentrosCosto('', '');
-
 		const modalEl = document.getElementById('modal-requerimiento');
 		if (modalEl) {
 			new bootstrap.Modal(modalEl).show();
@@ -411,7 +343,6 @@
 
 		const idRequerimientoEl = document.getElementById('IdRequerimiento');
 		const idCentroCostoEl = document.getElementById('IdCentroCosto');
-		const idSubCentroCostoEl = document.getElementById('IdSubCentroCosto');
 		const idMetaSiafEl = document.getElementById('IdMetaSIAF');
 		const nroPedidoEl = document.getElementById('NroPedidoCompra');
 		const codigoMetaEl = document.getElementById('CodigoMeta');
@@ -419,8 +350,6 @@
 
 		if (idRequerimientoEl) idRequerimientoEl.value = String(id);
 		if (idCentroCostoEl) idCentroCostoEl.value = fila.dataset.idCentroCosto || '';
-		poblarSubCentrosCosto(fila.dataset.idCentroCosto || '', fila.dataset.idSubCentroCosto || '');
-		if (idSubCentroCostoEl) idSubCentroCostoEl.value = fila.dataset.idSubCentroCosto || '';
 		if (idMetaSiafEl) idMetaSiafEl.value = fila.dataset.idMetaSiaf || '';
 		if (nroPedidoEl) nroPedidoEl.value = fila.dataset.nroPedido || '';
 		if (codigoMetaEl) codigoMetaEl.value = fila.dataset.codigoMeta || '';
@@ -507,14 +436,6 @@
 	if (inputCodigoMeta) {
 		inputCodigoMeta.addEventListener('input', function() {
 			this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
-		});
-	}
-
-	// Event listener para actualizar subcentros cuando cambia el centro de costo seleccionado
-	var selectCentroCostoRequerimiento = document.getElementById('IdCentroCosto');
-	if (selectCentroCostoRequerimiento) {
-		selectCentroCostoRequerimiento.addEventListener('change', function() {
-			poblarSubCentrosCosto(this.value, '');
 		});
 	}
 
@@ -668,13 +589,8 @@
 
 			const idRequerimiento = idRequerimientoEl ? idRequerimientoEl.value : '';
 			const idCentroCosto = idCentroCostoEl ? idCentroCostoEl.value : '';
-			const idSubCentroCostoEl = document.getElementById('IdSubCentroCosto');
-			const idSubCentroCosto = idSubCentroCostoEl ? idSubCentroCostoEl.value : '';
 			const idMetaSiaf = idMetaSiafEl ? idMetaSiafEl.value : '';
 			const centroCostoTexto = idCentroCostoEl && idCentroCostoEl.selectedOptions.length > 0 ? idCentroCostoEl.selectedOptions[0].text.trim() : '';
-			const subCentroCostoTexto = idSubCentroCosto ?
-				(idSubCentroCostoEl && idSubCentroCostoEl.selectedOptions.length > 0 ? idSubCentroCostoEl.selectedOptions[0].text.trim() : '') :
-				'';
 			const nroPedido = nroPedidoEl ? nroPedidoEl.value : '';
 			const codigoMeta = codigoMetaEl ? codigoMetaEl.value : '';
 			const anio = anioEl ? anioEl.value : '';
@@ -701,17 +617,15 @@
 						if (idRequerimiento) {
 							const filaActual = document.querySelector('tr[data-id="' + idRequerimiento + '"]');
 							const estadoActual = filaActual ? (filaActual.querySelector('.bg-success-lt') ? 1 : 0) : 0;
-							actualizarFilaRequerimiento(idRequerimiento, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCostoTexto, subCentroCostoTexto, anio, estadoActual);
+							actualizarFilaRequerimiento(idRequerimiento, idCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCostoTexto, anio, estadoActual);
 						} else {
-							agregarFilaRequerimiento(response.id, idCentroCosto, idSubCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCostoTexto, subCentroCostoTexto, anio, 0);
+							agregarFilaRequerimiento(response.id, idCentroCosto, idMetaSiaf, nroPedido, codigoMeta, centroCostoTexto, anio, 0);
 						}
 
 						form.reset();
 						if (idRequerimientoEl) idRequerimientoEl.value = '';
 						if (anioEl) anioEl.value = String(new Date().getFullYear());
 						if (idCentroCostoEl) idCentroCostoEl.value = idCentroCosto;
-						poblarSubCentrosCosto(idCentroCosto, '');
-
 						const titulo = document.querySelector('#modal-requerimiento .modal-title');
 						if (titulo) titulo.textContent = 'Nuevo Requerimiento';
 						const btnGuardar = document.getElementById('btnGuardarRequerimiento');

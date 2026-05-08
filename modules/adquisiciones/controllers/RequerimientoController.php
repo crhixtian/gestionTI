@@ -4,12 +4,11 @@ require_once 'modules/adquisiciones/models/CatalogoTecnologicoModel.php';
 require_once 'modules/adquisiciones/models/CierreAdquisicionModel.php';
 require_once 'modules/adquisiciones/helpers.php';
 
-// Carga la vista de requerimientos con filtros por año y opciones de distribución
-function cargarVistaRequerimientos($model, $anioFiltro, &$vistaActual, &$requerimientos, &$centrosCosto, &$subCentrosCosto, &$aniosDisponibles, &$metasSiafActivas)
+// Carga la vista de requerimientos con filtros por año y opciones base
+function cargarVistaRequerimientos($model, $anioFiltro, &$vistaActual, &$requerimientos, &$centrosCosto, &$aniosDisponibles, &$metasSiafActivas)
 {
 	$vistaActual = 'requerimientos';
 	$centrosCosto = $model->obtenerCentrosCosto();
-	$subCentrosCosto = $model->obtenerSubCentrosCostoActivos();
 	$metasSiafActivas = $model->obtenerMetasSiafActivas();
 	$aniosDisponibles = $model->obtenerAniosDisponibles();
 	$anioFiltro = resolverAnioFiltro($anioFiltro, $aniosDisponibles);
@@ -537,7 +536,6 @@ $action = $_GET['action'] ?? 'requerimientos';
 $vistaActual = 'requerimientos';
 $requerimientos = [];
 $centrosCosto = [];
-$subCentrosCosto = [];
 $metasSiafActivas = [];
 $aniosDisponibles = [];
 $anioFiltro = isset($_GET['anio']) && $_GET['anio'] !== '' ? (int) $_GET['anio'] : null;
@@ -597,7 +595,7 @@ switch ($action) {
 	// Carga la lista de requerimientos con opciones de filtro por año
 	case 'index':
 	case 'requerimientos':
-		$anioFiltro = cargarVistaRequerimientos($model, $anioFiltro, $vistaActual, $requerimientos, $centrosCosto, $subCentrosCosto, $aniosDisponibles, $metasSiafActivas);
+		$anioFiltro = cargarVistaRequerimientos($model, $anioFiltro, $vistaActual, $requerimientos, $centrosCosto, $aniosDisponibles, $metasSiafActivas);
 		break;
 
 	// Carga la lista de tecnologías con estado de fichas técnicas
@@ -679,7 +677,6 @@ switch ($action) {
 
 		$datos = [
 			'IdCentroCosto' => isset($_POST['IdCentroCosto']) ? (int) $_POST['IdCentroCosto'] : 0,
-			'IdSubCentroCosto' => isset($_POST['IdSubCentroCosto']) ? (int) $_POST['IdSubCentroCosto'] : 0,
 			'IdMetaSIAF' => isset($_POST['IdMetaSIAF']) && (int) $_POST['IdMetaSIAF'] > 0 ? (int) $_POST['IdMetaSIAF'] : null,
 			'NroPedidoCompra' => isset($_POST['NroPedidoCompra']) ? trim($_POST['NroPedidoCompra']) : '',
 			'CodigoMeta' => adqNormalizarCodigoMeta($_POST['CodigoMeta'] ?? null),
@@ -714,7 +711,6 @@ switch ($action) {
 		$id = isset($_POST['Id']) ? (int) $_POST['Id'] : 0;
 		$datos = [
 			'IdCentroCosto' => isset($_POST['IdCentroCosto']) ? (int) $_POST['IdCentroCosto'] : 0,
-			'IdSubCentroCosto' => isset($_POST['IdSubCentroCosto']) ? (int) $_POST['IdSubCentroCosto'] : 0,
 			'IdMetaSIAF' => isset($_POST['IdMetaSIAF']) && (int) $_POST['IdMetaSIAF'] > 0 ? (int) $_POST['IdMetaSIAF'] : null,
 			'NroPedidoCompra' => isset($_POST['NroPedidoCompra']) ? trim($_POST['NroPedidoCompra']) : '',
 			'CodigoMeta' => adqNormalizarCodigoMeta($_POST['CodigoMeta'] ?? null),
@@ -745,7 +741,6 @@ switch ($action) {
 		$idRequerimiento = isset($_POST['Id']) ? (int) $_POST['Id'] : 0;
 		$datos = [
 			'IdCentroCosto' => isset($_POST['IdCentroCosto']) ? (int) $_POST['IdCentroCosto'] : 0,
-			'IdSubCentroCosto' => isset($_POST['IdSubCentroCosto']) ? (int) $_POST['IdSubCentroCosto'] : 0,
 			'IdMetaSIAF' => isset($_POST['IdMetaSIAF']) && (int) $_POST['IdMetaSIAF'] > 0 ? (int) $_POST['IdMetaSIAF'] : null,
 			'NroPedidoCompra' => isset($_POST['NroPedidoCompra']) ? trim((string) $_POST['NroPedidoCompra']) : '',
 			'CodigoMeta' => adqNormalizarCodigoMeta($_POST['CodigoMeta'] ?? null),
@@ -1093,7 +1088,7 @@ switch ($action) {
 
 	// Carga la vista predeterminada de requerimientos
 	default:
-		$anioFiltro = cargarVistaRequerimientos($model, $anioFiltro, $vistaActual, $requerimientos, $centrosCosto, $subCentrosCosto, $aniosDisponibles, $metasSiafActivas);
+		$anioFiltro = cargarVistaRequerimientos($model, $anioFiltro, $vistaActual, $requerimientos, $centrosCosto, $aniosDisponibles, $metasSiafActivas);
 		break;
 }
 
