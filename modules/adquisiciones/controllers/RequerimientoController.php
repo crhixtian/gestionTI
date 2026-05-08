@@ -548,7 +548,7 @@ $dashboardMetaSiaf = [];
 $dashboardSubCentrosCosto = [];
 $idUsuarioSesion = isset($_SESSION['usuario_id']) ? (int) $_SESSION['usuario_id'] : null;
 // Define las acciones que deben resolverse en controladores especializados.
-$accionesDetalle = ['guardarDetalleAjax', 'actualizarDetalleAjax', 'eliminarDetalleAjax', 'actualizarEstadoAjax', 'guardarDetalleForm', 'obtenerDistribucionDetalleAjax', 'guardarDistribucionDetalleAjax', 'eliminarDistribucionDetalleAjax'];
+$accionesDetalle = ['guardarDetalleAjax', 'actualizarDetalleAjax', 'eliminarDetalleAjax', 'actualizarEstadoAjax', 'guardarDetalleForm', 'buscarDetallePorCodigoSigaAjax', 'obtenerDistribucionDetalleAjax', 'guardarDistribucionDetalleAjax', 'eliminarDistribucionDetalleAjax'];
 $accionesTecnologia = [
 	'tecnologia',
 	'verEspecificacionTecnicaAjax',

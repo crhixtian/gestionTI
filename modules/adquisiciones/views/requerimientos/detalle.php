@@ -159,6 +159,7 @@
 					<div class="mb-3">
 						<label class="form-label">Código SIGA</label>
 						<input type="text" name="CodigoSiga" id="detalle-CodigoSiga" class="form-control" required maxlength="12">
+						<div id="detalle-CodigoSiga-ayuda" class="form-hint"></div>
 					</div>
 					<div class="mb-3">
 						<label class="form-label">Clasificador</label>
@@ -285,11 +286,13 @@
 	const subCentrosCostoDistribucion = <?php echo json_encode($subCentrosCostoDistribucion); ?>;
 	let modoEdicion = false;
 	let estadoActualRequerimiento = <?php echo (int) $requerimiento['Estado']; ?>;
+	let timeoutBusquedaCodigoSiga = null;
+	let solicitudBusquedaCodigoSiga = 0;
 
-	// Retorna la descripción formateada del pedido incluyendo número y código meta si aplica
-	function descripcionPedidoConMeta() {
+	// Retorna la descripción formateada del pedido incluyendo número
+	function descripcionPedido() {
 		if (codigoMetaRequerimiento) {
-			return 'Pedido de Compra ' + nroPedidoCompra + ' - Meta ' + codigoMetaRequerimiento;
+			return 'Pedido de Compra ' + nroPedidoCompra;
 		}
 
 		return 'Pedido de Compra ' + nroPedidoCompra;
@@ -308,6 +311,23 @@
 		const el = document.getElementById(id);
 		if (el) {
 			el.textContent = text;
+		}
+	}
+
+	function setHintCodigoSiga(text, type) {
+		const hint = document.getElementById('detalle-CodigoSiga-ayuda');
+		if (!hint) {
+			return;
+		}
+
+		hint.textContent = text || '';
+		hint.className = 'form-hint';
+		if (type === 'success') {
+			hint.classList.add('text-success');
+		} else if (type === 'warning') {
+			hint.classList.add('text-warning');
+		} else {
+			hint.classList.add('text-secondary');
 		}
 	}
 
@@ -748,7 +768,8 @@
 		setValue('detalle-UnidadMedida', 'UND');
 		setValue('detalle-IdCatalogoTecnologico', '');
 		setValue('detalle-Clasificador', '');
-		setText('modal-detalle-title', 'Agregar Ítem - ' + descripcionPedidoConMeta());
+		setHintCodigoSiga('', 'secondary');
+		setText('modal-detalle-title', 'Agregar Ítem - ' + descripcionPedido());
 		// Si Bootstrap no se dispara por data-bs-*, este fallback lo abre igual.
 		showModalById('modal-detalle');
 	}
@@ -767,6 +788,85 @@
 
 		const option = select.options[selectedIndex];
 		return option && option.dataset ? (option.dataset.codigo || '') : '';
+	}
+
+	function completarDetalleConDatosSiga(datos) {
+		if (!datos) {
+			return;
+		}
+
+		setValue('detalle-Clasificador', datos.Clasificador || '');
+		setValue('detalle-DescripcionDetallada', datos.DescripcionDetallada || '');
+		setValue('detalle-UnidadMedida', datos.UnidadMedida || 'UND');
+
+		const cantidadInput = document.getElementById('detalle-Cantidad');
+		if (cantidadInput && parseInt(datos.Cantidad, 10) > 0) {
+			cantidadInput.value = parseInt(datos.Cantidad, 10);
+		}
+
+		const idCatalogo = parseInt(datos.IdCatalogoTecnologico, 10) || 0;
+		const catalogoSelect = document.getElementById('detalle-IdCatalogoTecnologico');
+		if (catalogoSelect && idCatalogo > 0 && catalogoSelect.querySelector('option[value="' + idCatalogo + '"]')) {
+			catalogoSelect.value = String(idCatalogo);
+		} else if (catalogoSelect) {
+			catalogoSelect.value = '';
+		}
+	}
+
+	function buscarDatosCodigoSiga(codigoSiga) {
+		const codigo = String(codigoSiga || '').trim();
+		solicitudBusquedaCodigoSiga++;
+		const solicitudActual = solicitudBusquedaCodigoSiga;
+
+		if (codigo.length < 4) {
+			setHintCodigoSiga('', 'secondary');
+			return;
+		}
+
+		setHintCodigoSiga('Buscando datos previos...', 'secondary');
+		fetch('index.php?module=adquisiciones&action=buscarDetallePorCodigoSigaAjax&codigoSiga=' + encodeURIComponent(codigo) + '&_=' + Date.now(), {
+				cache: 'no-store'
+			})
+			.then(function(response) {
+				return response.text().then(function(text) {
+					if (!response.ok) {
+						return { success: false, message: 'Error de servidor (' + response.status + ')' };
+					}
+					try {
+						return JSON.parse(text);
+					} catch (error) {
+						console.error('JSON invalido al buscar Codigo SIGA:', error, text);
+						return { success: false, message: 'Respuesta invalida del servidor' };
+					}
+				});
+			})
+			.then(function(response) {
+				if (solicitudActual !== solicitudBusquedaCodigoSiga) {
+					return;
+				}
+				if (response.success && response.data) {
+					completarDetalleConDatosSiga(response.data);
+					setHintCodigoSiga('Datos encontrados para este codigo.', 'success');
+					return;
+				}
+				setHintCodigoSiga('Sin datos previos para este codigo.', 'warning');
+			})
+			.catch(function(error) {
+				if (solicitudActual !== solicitudBusquedaCodigoSiga) {
+					return;
+				}
+				console.error('Error buscando Codigo SIGA:', error);
+				setHintCodigoSiga('No se pudo buscar el codigo en este momento.', 'warning');
+			});
+	}
+
+	function programarBusquedaCodigoSiga() {
+		const input = document.getElementById('detalle-CodigoSiga');
+		const codigo = input ? input.value : '';
+		clearTimeout(timeoutBusquedaCodigoSiga);
+		timeoutBusquedaCodigoSiga = setTimeout(function() {
+			buscarDatosCodigoSiga(codigo);
+		}, 350);
 	}
 
 	// Carga los datos de un ítem en el formulario para edición
@@ -792,7 +892,8 @@
 		setValue('detalle-DescripcionDetallada', descripcionDetallada);
 		setValue('detalle-Cantidad', cantidad);
 		setValue('detalle-UnidadMedida', unidadMedida);
-		setText('modal-detalle-title', 'Editar Ítem - ' + descripcionPedidoConMeta());
+		setHintCodigoSiga('', 'secondary');
+		setText('modal-detalle-title', 'Editar Ítem - ' + descripcionPedido());
 
 		showModalById('modal-detalle');
 	}
@@ -950,6 +1051,7 @@
 		const formDetalle = document.getElementById('form-detalle');
 		const formDistribucion = document.getElementById('form-distribucion-detalle');
 		const selectCentroDistribucion = document.getElementById('distribucion-IdCentroCosto');
+		const inputCodigoSiga = document.getElementById('detalle-CodigoSiga');
 
 		if (btnAgregar && !btnAgregar.dataset.inicializado) {
 			btnAgregar.addEventListener('click', nuevoDetalle);
@@ -968,6 +1070,14 @@
 				actualizarSubCentrosDisponibles(this.value);
 			});
 			selectCentroDistribucion.dataset.inicializado = '1';
+		}
+		if (inputCodigoSiga && !inputCodigoSiga.dataset.inicializadoAutocomplete) {
+			inputCodigoSiga.addEventListener('input', programarBusquedaCodigoSiga);
+			inputCodigoSiga.addEventListener('blur', function() {
+				clearTimeout(timeoutBusquedaCodigoSiga);
+				buscarDatosCodigoSiga(this.value);
+			});
+			inputCodigoSiga.dataset.inicializadoAutocomplete = '1';
 		}
 		configurarBotonesModalFallback();
 	}

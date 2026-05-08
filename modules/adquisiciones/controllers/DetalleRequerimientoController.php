@@ -123,6 +123,27 @@ switch ($action) {
 		exit;
 
 	// Obtiene todas las distribuciones de un detalle vía AJAX
+	case 'buscarDetallePorCodigoSigaAjax':
+		ini_set('display_errors', '0');
+		ini_set('display_startup_errors', '0');
+		adqEnviarHeaderSeguro('Content-Type: application/json; charset=UTF-8');
+
+		$codigoSiga = isset($_GET['codigoSiga']) ? trim((string) $_GET['codigoSiga']) : '';
+		$idRequerimientoExcluir = isset($_GET['idRequerimiento']) ? (int) $_GET['idRequerimiento'] : 0;
+
+		if ($codigoSiga === '') {
+			echo json_encode(['success' => false, 'message' => 'Codigo SIGA vacio']);
+			exit;
+		}
+
+		$datosSiga = $model->obtenerDatosPorCodigoSiga($codigoSiga, $idRequerimientoExcluir);
+		if ($datosSiga) {
+			echo json_encode(['success' => true, 'data' => $datosSiga]);
+		} else {
+			echo json_encode(['success' => false, 'message' => 'No hay datos previos para este Codigo SIGA']);
+		}
+		exit;
+
 	case 'obtenerDistribucionDetalleAjax':
 		ini_set('display_errors', '0');
 		ini_set('display_startup_errors', '0');

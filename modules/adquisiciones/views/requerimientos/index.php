@@ -139,7 +139,7 @@
 						<input type="text" name="NroPedidoCompra" id="NroPedidoCompra" class="form-control" placeholder="000000" required maxlength="10">
 					</div>
 					<div class="mb-3">
-						<label class="form-label">Código Meta</label>
+						<label class="form-label">Meta SIGA</label>
 						<input type="text" name="CodigoMeta" id="CodigoMeta" class="form-control" placeholder="0000" maxlength="4" pattern="[A-Za-z0-9]{0,4}" autocomplete="off">
 					</div>
 					<div class="mb-3">
